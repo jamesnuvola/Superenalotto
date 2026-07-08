@@ -1,0 +1,312 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.dashboard-section {
+  background: linear-gradient(135deg, #070f1a 0%, #0a1625 100%);
+  border: 1px solid #12263d;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.08);
+}
+
+.dashboard-section h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #ddeeff;
+}
+
+.dashboard-section h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #ddeeff;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #0a1625 0%, #0f1f2d 100%);
+  border: 1px solid #1e3d5c;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  border-color: #00d4ff;
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+.stat-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #4d7a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00d4ff 0%, #9d7fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Two Column Layout */
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Number List */
+.number-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.number-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid #12263d;
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.number-item:hover {
+  border-color: #1e3d5c;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.rank-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff4566 0%, #ff8c42 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.number-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+
+.number-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ddeeff;
+}
+
+.number-label {
+  font-size: 12px;
+  color: #4d7a9a;
+}
+
+.number-bar {
+  flex: 1;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 12px;
+}
+
+.number-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  min-width: 20%;
+}
+
+/* Draws Table */
+.draws-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.draw-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 212, 255, 0.03);
+  border: 1px solid #12263d;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.draw-row:hover {
+  border-color: #1e3d5c;
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.draw-date {
+  font-size: 14px;
+  color: #4d7a9a;
+  min-width: 90px;
+  font-weight: 500;
+}
+
+.draw-number {
+  font-size: 12px;
+  background: #1e3d5c;
+  color: #00d4ff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
+}
+
+.draw-numbers {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.draw-num-ball {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.draw-jolly {
+  font-size: 14px;
+  color: #f0c040;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-section {
+    padding: 20px;
+  }
+
+  .dashboard-section h2 {
+    font-size: 20px;
+  }
+
+  .dashboard-section h3 {
+    font-size: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-number {
+    font-size: 24px;
+  }
+
+  .draw-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .draw-numbers {
+    width: 100%;
+    order: 3;
+  }
+
+  .draw-date {
+    min-width: auto;
+  }
+
+  .draw-jolly {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-section {
+    padding: 16px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-icon {
+    font-size: 24px;
+  }
+
+  .stat-number {
+    font-size: 20px;
+  }
+
+  .number-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .number-bar {
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  .draw-num-ball {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+}
