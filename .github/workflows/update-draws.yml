@@ -1,0 +1,32 @@
+name: Aggiorna estrazioni SuperEnalotto
+
+on:
+  schedule:
+    # Ogni giorno alle 21:30 CEST (19:30 UTC) - dopo le estrazioni serali
+    - cron: '30 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-draws:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+
+    - name: Esegui script di aggiornamento
+      run: node scripts/update-draws.mjs
+
+    - name: Commit e push se ci sono modifiche
+      run: |
+        git config user.name "SONAR Bot"
+        git config user.email "actions@github.com"
+        git add src/data/draws.js
+        git diff --staged --quiet || git commit -m "chore: aggiornamento automatico estrazioni $(date -u +'%Y-%m-%d')"
+        git push
