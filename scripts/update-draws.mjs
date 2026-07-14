@@ -115,7 +115,21 @@ function writeDraws(raw, draws) {
 
 async function main() {
   console.log('Recupero dati dalla fonte primaria (superenalotto.it)...')
-  const primaryDraws = await fetchPrimary()
+  let primaryDraws
+  try {
+    primaryDraws = await fetchPrimary()
+  } catch (err) {
+    console.error('Fonte primaria non raggiungibile:', err.message, err.cause ? `(${err.cause.code || err.cause.message})` : '')
+    console.log('Provo comunque la fonte di verifica per capire se è un blocco specifico o generale...')
+    try {
+      await fetchSecondary()
+      console.log('La fonte di verifica invece risponde: probabile blocco specifico su superenalotto.it (es. geo-restrizione).')
+    } catch (err2) {
+      console.error('Anche la fonte di verifica non risponde:', err2.message, err2.cause ? `(${err2.cause.code || err2.cause.message})` : '')
+      console.log('Probabile blocco generale dal runner GitHub Actions (rete/DNS), non specifico di un sito.')
+    }
+    throw new Error('Impossibile procedere senza la fonte primaria.')
+  }
   if (primaryDraws.length === 0) {
     throw new Error('Nessun concorso estratto dalla fonte primaria: verificare il parsing.')
   }
@@ -161,5 +175,9 @@ async function main() {
 
 main().catch(err => {
   console.error('Errore durante l\'aggiornamento:', err.message)
+  if (err.cause) {
+    console.error('Causa di rete:', err.cause.code || err.cause.message || err.cause)
+  }
   process.exit(1)
 })
+
