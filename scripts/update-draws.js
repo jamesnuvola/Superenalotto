@@ -71,6 +71,13 @@ async function fetchSecondary() {
   const superstarMatch = text.match(/superstar[^\d]*sorteggiato[^\d]*è il numero\s*(\d{1,2})/i)
 
   if (!dataMatch || !numeriMatch || !jollyMatch || !superstarMatch) {
+    console.error('Diagnostica parsing fonte di verifica:')
+    console.error('  dataMatch:', dataMatch ? 'OK' : 'FALLITO')
+    console.error('  numeriMatch:', numeriMatch ? 'OK' : 'FALLITO')
+    console.error('  jollyMatch:', jollyMatch ? 'OK' : 'FALLITO')
+    console.error('  superstarMatch:', superstarMatch ? 'OK' : 'FALLITO')
+    const idx = text.indexOf('ultimo concorso Superenalotto')
+    console.error('  Estratto testo intorno al punto chiave:', text.slice(Math.max(0, idx - 50), idx + 300))
     throw new Error('Impossibile interpretare la fonte di verifica (formato pagina cambiato?)')
   }
 
