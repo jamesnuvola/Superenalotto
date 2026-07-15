@@ -2,6 +2,11 @@
 // Fonte: tuttosuperenalotto.it, tabella dell'anno in corso (concorso, data,
 // 6 numeri, jolly, superstar). Recupera automaticamente tutte le estrazioni
 // mancanti dell'anno in corso, non solo l'ultima.
+//
+// Nota tecnica: la tabella HTML del sito spezza ogni riga logica in più
+// righe tecniche (celle annidate), quindi non ci affidiamo ai confini di
+// riga: trattiamo la pagina come un unico flusso di testo e cerchiamo
+// sequenze ripetute nell'ordine noto (concorso, data, 8 numeri).
 
 import fs from 'fs'
 import path from 'path'
@@ -23,19 +28,12 @@ function decodeEntities(html) {
     .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
 }
 
-// Converte l'HTML in righe di testo, una per riga di tabella (<tr>),
-// cosi' i numeri di righe diverse non si mescolano tra loro.
-function htmlToRows(html) {
-  const withBreaks = html
-    .replace(/<\/tr>/gi, '\n')
+function stripHtml(html) {
+  const noTags = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
-
-  return decodeEntities(withBreaks)
-    .split('\n')
-    .map(line => line.replace(/[ \t]+/g, ' ').trim())
-    .filter(line => line.length > 0)
+  return decodeEntities(noTags).replace(/\s+/g, ' ').trim()
 }
 
 async function fetchYearTable() {
@@ -44,35 +42,37 @@ async function fetchYearTable() {
   })
   if (!res.ok) throw new Error(`Errore ${res.status} su ${TABLE_URL}`)
   const html = await res.text()
-  const rows = htmlToRows(html)
 
-  console.log(`Diagnostica: ${rows.length} righe totali dopo la conversione.`)
-  const righeConDate = rows.filter(r => /\d{2}\/\d{2}\/\d{4}/.test(r))
-  console.log(`Diagnostica: ${righeConDate.length} righe contengono una data.`)
-  righeConDate.slice(0, 5).forEach((r, i) => {
-    console.log(`  Riga esempio ${i + 1}: ${r.slice(0, 200)}`)
-  })
+  // Isoliamo solo la sezione della tabella per evitare falsi positivi
+  // altrove nella pagina (es. il menu con l'elenco degli anni).
+  const startIdx = html.indexOf('Risultati estrazione Superenalotto per l\'anno')
+  const section = startIdx >= 0 ? html.slice(startIdx, startIdx + 200000) : html
+  const text = stripHtml(section)
 
-  // Ogni riga valida: numero concorso, poi una data gg/mm/aaaa, poi 8 numeri
+  console.log(`Diagnostica: sezione tabella isolata, ${text.length} caratteri.`)
+
+  // Ogni record: concorso (1-3 cifre), una data gg/mm/aaaa, poi 8 numeri
   // (6 della sestina + jolly + superstar).
-  const rowRegex = /^(\d{1,3})\D+?(\d{2}\/\d{2}\/\d{4})\D+?((?:\d{1,2}\D+){7}\d{1,2})\D*$/
+  const recordRegex = /(\d{1,3})\D+?(\d{2}\/\d{2}\/\d{4})((?:\D*\d{1,2}){8})/g
   const draws = []
+  let match
 
-  for (const line of rows) {
-    const m = line.match(rowRegex)
-    if (!m) continue
-    const concorso = Number(m[1])
-    const data = m[2]
-    const numeriBlob = m[3].match(/\d{1,2}/g)
-    if (!numeriBlob || numeriBlob.length < 8) continue
-    const nums = numeriBlob.map(Number)
-    const numeri = nums.slice(0, 6)
-    const jolly = nums[6]
-    // superstar (nums[7]) non è nello schema attuale di draws.js, non lo salviamo.
+  while ((match = recordRegex.exec(text)) !== null) {
+    const concorso = Number(match[1])
+    const data = match[2]
+    const nums = (match[3].match(/\d{1,2}/g) || []).map(Number)
+    if (nums.length < 8) continue
     if (concorso < 1 || concorso > 400) continue
-    draws.push({ concorso, data, numeri, jolly })
+    draws.push({
+      concorso,
+      data,
+      numeri: nums.slice(0, 6),
+      jolly: nums[6]
+      // superstar (nums[7]) non è nello schema attuale di draws.js, non lo salviamo.
+    })
   }
 
+  console.log(`Diagnostica: ${draws.length} record grezzi trovati (prima della deduplica).`)
   return draws
 }
 
@@ -95,7 +95,6 @@ function writeDraws(raw, draws) {
   fs.writeFileSync(DRAWS_PATH, updated, 'utf8')
 }
 
-// Converte 'gg/mm/aaaa' in un numero ordinabile aaaammgg.
 function dateSortKey(d) {
   const [gg, mm, aaaa] = d.split('/')
   return Number(`${aaaa}${mm}${gg}`)
@@ -113,7 +112,12 @@ async function main() {
   const { raw, SEED_DRAWS } = loadExistingDraws()
   const existingDates = new Set(SEED_DRAWS.map(([data]) => data))
 
-  const nuovi = tableDraws
+  // Rimuoviamo eventuali duplicati (stessa data trovata più volte nel testo)
+  const uniqueByDate = new Map()
+  for (const d of tableDraws) uniqueByDate.set(d.data, d)
+  const tableDrawsUnique = [...uniqueByDate.values()]
+
+  const nuovi = tableDrawsUnique
     .filter(d => !existingDates.has(d.data))
     .sort((a, b) => dateSortKey(a.data) - dateSortKey(b.data))
 
