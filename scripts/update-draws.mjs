@@ -46,6 +46,13 @@ async function fetchYearTable() {
   const html = await res.text()
   const rows = htmlToRows(html)
 
+  console.log(`Diagnostica: ${rows.length} righe totali dopo la conversione.`)
+  const righeConDate = rows.filter(r => /\d{2}\/\d{2}\/\d{4}/.test(r))
+  console.log(`Diagnostica: ${righeConDate.length} righe contengono una data.`)
+  righeConDate.slice(0, 5).forEach((r, i) => {
+    console.log(`  Riga esempio ${i + 1}: ${r.slice(0, 200)}`)
+  })
+
   // Ogni riga valida: numero concorso, poi una data gg/mm/aaaa, poi 8 numeri
   // (6 della sestina + jolly + superstar).
   const rowRegex = /^(\d{1,3})\D+?(\d{2}\/\d{2}\/\d{4})\D+?((?:\d{1,2}\D+){7}\d{1,2})\D*$/
