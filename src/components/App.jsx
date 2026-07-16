@@ -3,6 +3,7 @@ import { COLORS, storage } from '../utils/constants'
 import SEED_DRAWS from '../data/draws'
 import Header from './Header'
 import Dashboard from './Dashboard'
+import PositionTrends from './PositionTrends'
 import './App.css'
 
 export default function App() {
@@ -29,7 +30,12 @@ export default function App() {
       <Header draws={draws} activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="app-main">
-        {activeTab === 'dashboard' && <Dashboard draws={draws} />}
+        {activeTab === 'dashboard' && (
+          <>
+            <Dashboard draws={draws} />
+            <PositionTrends draws={draws} />
+          </>
+        )}
         {activeTab === 'search' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>🔍 Ricerca - Coming Soon</div>}
         {activeTab === 'stats' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>📈 Statistiche - Coming Soon</div>}
         {activeTab === 'settings' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>⚙️ Impostazioni - Coming Soon</div>}
