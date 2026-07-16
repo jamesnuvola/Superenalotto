@@ -1,0 +1,74 @@
+.position-trends {
+  margin: 32px 0;
+}
+
+.position-trends h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #ddeeff;
+}
+
+.trends-caption {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #4d7a9a;
+  line-height: 1.5;
+}
+
+.trends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.trend-card {
+  background: #0a1625;
+  border: 1px solid #12263d;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.trend-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.trend-position {
+  font-size: 16px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.trend-last {
+  font-size: 12px;
+  color: #4d7a9a;
+}
+
+.trend-chart-label {
+  font-size: 11px;
+  color: #4d7a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 10px 0 2px;
+}
+
+.sparkline {
+  display: block;
+  height: 50px;
+}
+
+.trend-dates {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #2f4a63;
+  margin-top: 6px;
+}
+
+@media (max-width: 480px) {
+  .trends-grid {
+    grid-template-columns: 1fr;
+  }
+}
