@@ -27,7 +27,9 @@ export default function Home({ draws }) {
                 <span className="sestina-ball" style={{ background: POS_COLORS[i % 6] }}>
                   {num}
                 </span>
-                <span className="sestina-rank">P{i + 1}</span>
+                <span className="sestina-rank">
+                  P{i + 1} · rank {topSestine[0].dettaglio[i].rank}/{topSestine[0].dettaglio[i].poolSize}
+                </span>
               </div>
             ))}
           </div>
