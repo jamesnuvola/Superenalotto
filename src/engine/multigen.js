@@ -30,6 +30,29 @@ function seedFromDraws(draws) {
   return draws.length * 100000 + (last ? last[1] : 0)
 }
 
+// Curve empiriche di probabilita' per bucket di rank (ampiezza 3), per posizione.
+// Estratte dal laboratorio di backtest su 2874 estrazioni reali: "quando il
+// numero vero era in questo bucket di rank, quanto spesso e' successo davvero?"
+// Sostituiscono il punteggio grezzo come peso di campionamento — pesare per
+// probabilita' storica reale invece che per magnitudine del punteggio ha
+// mostrato un miglioramento concreto nel laboratorio (media numeri azzeccati
+// 1.23 -> 1.52 su 60 estrazioni reali in walk-forward).
+const RANK_BUCKET_WIDTH = 3
+const RANK_PROBABILITY_CURVES = [
+  [0.1152, 0.1264, 0.1088, 0.1062, 0.1028, 0.0969, 0.0875, 0.0699, 0.0509, 0.0352, 0.0266, 0.0221, 0.0168, 0.0108], // P1
+  [0.074, 0.0778, 0.0565, 0.061, 0.0755, 0.0752, 0.0673, 0.0625, 0.0669, 0.0557, 0.061, 0.0505, 0.0374, 0.0363], // P2
+  [0.0696, 0.0583, 0.0423, 0.0456, 0.0613, 0.0669, 0.0662, 0.0606, 0.0583, 0.0598, 0.0505, 0.052, 0.0497, 0.0393], // P3
+  [0.0651, 0.0606, 0.0714, 0.0677, 0.0598, 0.0546, 0.0613, 0.0531, 0.0639, 0.0542, 0.0475, 0.0441, 0.0475, 0.0449], // P4
+  [0.0737, 0.074, 0.0591, 0.055, 0.0684, 0.0673, 0.0726, 0.0662, 0.0696, 0.0572, 0.058, 0.0561, 0.0453, 0.0404], // P5
+  [0.1286, 0.1339, 0.1013, 0.1159, 0.1159, 0.1047, 0.083, 0.0654, 0.0396, 0.0299, 0.0224, 0.0176, 0.0079, 0.012] // P6
+]
+
+function rankProbabilityWeight(position, rank) {
+  const bucket = Math.floor((rank - 1) / RANK_BUCKET_WIDTH)
+  const curve = RANK_PROBABILITY_CURVES[position]
+  return curve[bucket] ?? 0.001 // piccola probabilita' residua oltre la curva misurata
+}
+
 function buildHistoricalSets(draws) {
   const sestine = new Set()
   const cinquine = new Set()
@@ -71,7 +94,13 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
   for (let p = 0; p < 6; p++) {
     const full = rankedCandidates(draws, p)
     fullRanking.push(full)
-    perPosition.push(full.slice(0, POOL_WIDTH_BY_POSITION[p]))
+    // Il pool per il campionamento usa il PESO EMPIRICO (probabilita' storica
+    // reale per quel rank), non il punteggio grezzo.
+    const pool = full.slice(0, POOL_WIDTH_BY_POSITION[p]).map(([num, score], idx) => {
+      const rank = idx + 1
+      return [num, rankProbabilityWeight(p, rank), score, rank]
+    })
+    perPosition.push(pool)
   }
 
   const historicalSets = buildHistoricalSets(draws)
@@ -88,16 +117,16 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
       const lastPicked = chosen.length > 0 ? chosen[chosen.length - 1] : 0
       const validPool = perPosition[p].filter(([n]) => n > lastPicked && !chosen.includes(n))
       if (validPool.length === 0) { ok = false; break }
-      const [num, score] = weightedPick(validPool, rng)
+      const [num, weight, score, rank] = weightedPick(validPool, rng)
       chosen.push(num)
       dettaglio.push({
         posizione: p + 1,
         numero: num,
         punteggio: score,
-        rank: fullRanking[p].findIndex(([n]) => n === num) + 1,
+        rank,
         poolSize: fullRanking[p].length
       })
-      totalScore += score
+      totalScore += score // il punteggio totale mostrato resta il punteggio grezzo, per confrontabilita'
     }
 
     if (!ok) continue
