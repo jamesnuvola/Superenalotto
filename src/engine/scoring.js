@@ -66,16 +66,32 @@ export function clusterScores(history, position, maxLag = CLUSTER_MAX_LAG) {
   return scores
 }
 
-// Punteggio composito (Metodo A validato): somma delle 4 regole normalizzate.
+const VOLATILITY_WINDOW = 20
+
+export function volatilityScores(history, position, window = VOLATILITY_WINDOW) {
+  const recent = history.slice(-window).map(d => d[2][position])
+  const mean = recent.reduce((s, n) => s + n, 0) / recent.length
+  const variance = recent.reduce((s, n) => s + (n - mean) ** 2, 0) / recent.length
+  const sigma = Math.max(Math.sqrt(variance), 3)
+  const allSeen = new Set(history.map(d => d[2][position]))
+  const scores = new Map()
+  for (const n of allSeen) {
+    scores.set(n, Math.exp(-((n - mean) ** 2) / (2 * sigma * sigma)))
+  }
+  return scores
+}
+
+// Punteggio composito (Metodo A validato): somma delle 5 regole normalizzate.
 export function compositeScores(history, position) {
   const hot = normalize(hotScores(history, position))
   const delay = normalize(delayScores(history, position))
   const dec = normalize(decadeScores(history, position))
   const clus = normalize(clusterScores(history, position))
-  const all = new Set([...hot.keys(), ...delay.keys(), ...dec.keys(), ...clus.keys()])
+  const vol = normalize(volatilityScores(history, position))
+  const all = new Set([...hot.keys(), ...delay.keys(), ...dec.keys(), ...clus.keys(), ...vol.keys()])
   const scores = new Map()
   for (const n of all) {
-    scores.set(n, (hot.get(n) || 0) + (delay.get(n) || 0) + (dec.get(n) || 0) + (clus.get(n) || 0))
+    scores.set(n, (hot.get(n) || 0) + (delay.get(n) || 0) + (dec.get(n) || 0) + (clus.get(n) || 0) + (vol.get(n) || 0))
   }
   return scores
 }
