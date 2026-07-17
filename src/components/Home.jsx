@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { POS_COLORS } from '../utils/constants'
-import { generateTopSestine } from '../engine/multigen'
+import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
 import './Home.css'
 
 export default function Home({ draws }) {
@@ -22,20 +22,37 @@ export default function Home({ draws }) {
 
         {topSestine.length > 0 && (
           <div className="sestina-display featured">
-            {topSestine[0].numeri.map((num, i) => (
-              <div className="sestina-ball-wrap" key={i}>
-                <span className="sestina-ball" style={{ background: POS_COLORS[i % 6] }}>
-                  {num}
-                </span>
-                <span className="sestina-rank">
-                  P{i + 1} · rank {topSestine[0].dettaglio[i].rank}/{topSestine[0].dettaglio[i].poolSize}
-                </span>
-              </div>
-            ))}
+            {topSestine[0].numeri.map((num, i) => {
+              const d = topSestine[0].dettaglio[i]
+              const band = RANK_BANDS_BY_POSITION[i]
+              const qualifier = d.rank <= band.p25
+                ? `meglio del solito (fascia tipica: ${band.p25}-${band.p75})`
+                : d.rank <= band.p75
+                  ? `nella norma (fascia tipica: ${band.p25}-${band.p75})`
+                  : `sotto la media tipica (${band.p25}-${band.p75})`
+              return (
+                <div className="sestina-ball-wrap" key={i}>
+                  <span className="sestina-ball" style={{ background: POS_COLORS[i % 6] }}>
+                    {num}
+                  </span>
+                  <span className="sestina-rank">P{i + 1} · rank {d.rank}/{d.poolSize}</span>
+                  <span className="sestina-qualifier">{qualifier}</span>
+                </div>
+              )
+            })}
           </div>
         )}
         <p className="sestina-featured-label">
           ↑ La migliore (punteggio {topSestine[0]?.punteggioTotale.toFixed(2)})
+        </p>
+
+        <p className="honesty-note">
+          ℹ️ Rank medio di questa proposta: <strong>{topSestine[0]?.rankMedio.toFixed(2)}</strong>.
+          Le sestine mostrate sono filtrate per restare dentro la fascia di rank medio
+          realmente osservata nelle 2.874 estrazioni reali (tra {HISTORICAL_AVG_RANK.p10} e{' '}
+          {HISTORICAL_AVG_RANK.p90}) — scartiamo automaticamente i profili troppo ottimistici,
+          mai verificatisi in passato. Restano comunque tra i più favorevoli statisticamente
+          possibili: è un gioco statistico, non una previsione.
         </p>
 
         <div className="sestine-list">
