@@ -10,8 +10,11 @@
 
 import fs from 'fs'
 import path from 'path'
+import { actualRank } from '../src/engine/scoring.js'
 
 const DRAWS_PATH = path.resolve('src/data/draws.js')
+const RANK_HISTORY_PATH = path.resolve('src/data/rank-history.json')
+const MAX_RANK_HISTORY_ENTRIES = 500 // evita che il file cresca all'infinito
 const TABLE_URL = 'https://www.tuttosuperenalotto.it/superenalotto-archivio-risultati-per-anno.asp'
 
 function decodeEntities(html) {
@@ -100,6 +103,42 @@ function dateSortKey(d) {
   return Number(`${aaaa}${mm}${gg}`)
 }
 
+function loadRankHistory() {
+  try {
+    return JSON.parse(fs.readFileSync(RANK_HISTORY_PATH, 'utf8'))
+  } catch {
+    return [] // il file non esiste ancora o è vuoto: si parte da zero
+  }
+}
+
+function saveRankHistory(entries) {
+  // Teniamo solo le ultime N voci per non far crescere il file all'infinito.
+  const trimmed = entries.slice(-MAX_RANK_HISTORY_ENTRIES)
+  fs.writeFileSync(RANK_HISTORY_PATH, JSON.stringify(trimmed, null, 2))
+}
+
+// Calcola il rank (secondo il motore attuale) di ogni nuova estrazione,
+// usando SOLO le estrazioni precedenti ad essa — mai guardare avanti,
+// stesso principio walk-forward del laboratorio di backtest.
+function computeRankEntries(historyBefore, nuoviDraws) {
+  const entries = []
+  let history = historyBefore
+  for (const d of nuoviDraws) {
+    const draw = [d.data, d.concorso, d.numeri, d.jolly]
+    const ranks = []
+    const poolSizes = []
+    for (let p = 0; p < 6; p++) {
+      const r = actualRank(history, p, draw[2][p])
+      ranks.push(r.rank)
+      poolSizes.push(r.poolSize)
+    }
+    const rankMedio = Math.round((ranks.reduce((s, r) => s + r, 0) / 6) * 100) / 100
+    entries.push({ data: d.data, concorso: d.concorso, ranks, poolSizes, rankMedio })
+    history = [...history, draw] // la prossima nuova estrazione vede anche questa come storia
+  }
+  return entries
+}
+
 async function main() {
   console.log('Recupero la tabella delle estrazioni dell\'anno in corso...')
   const tableDraws = await fetchYearTable()
@@ -133,6 +172,14 @@ async function main() {
 
   writeDraws(raw, updatedDraws)
   console.log(`Aggiunte ${nuovi.length} nuove estrazioni: ${nuovi.map(d => d.data).join(', ')}`)
+
+  // Registriamo il rank di ogni nuova estrazione secondo il motore attuale,
+  // per costruire nel tempo lo storico su cui basare le future ricalibrazioni.
+  const nuoveVociRank = computeRankEntries(SEED_DRAWS, nuovi)
+  const rankHistory = [...loadRankHistory(), ...nuoveVociRank]
+  saveRankHistory(rankHistory)
+  console.log(`Registrato il rank per ${nuoveVociRank.length} nuove estrazioni in rank-history.json.`)
+  nuoveVociRank.forEach(v => console.log(`  ${v.data}: rank=${v.ranks.join(',')} rankMedio=${v.rankMedio}`))
 }
 
 main().catch(err => {
