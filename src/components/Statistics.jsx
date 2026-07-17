@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { POS_COLORS } from '../utils/constants'
 import PositionTrends from './PositionTrends'
+import NumberRankTable from './NumberRankTable'
 import './Dashboard.css' // riusa stats-grid, stat-card, two-column, number-list, ecc.
 
 export default function Statistics({ draws }) {
@@ -33,6 +34,7 @@ export default function Statistics({ draws }) {
   return (
     <div className="dashboard">
       <PositionTrends draws={draws} />
+      <NumberRankTable draws={draws} />
 
       <section className="dashboard-section">
         <h2>📊 Panoramica Generale</h2>
