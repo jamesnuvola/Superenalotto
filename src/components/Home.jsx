@@ -1,10 +1,31 @@
 import { useMemo } from 'react'
 import { POS_COLORS } from '../utils/constants'
 import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
+import { actualRank } from '../engine/scoring'
 import './Home.css'
+
+const RECENT_LOOKBACK = 10
+
+// Calcola, per le ultime N estrazioni reali, il rank di ciascun numero per
+// posizione (usando SOLO le estrazioni precedenti, walk-forward) e il rank
+// medio della sestina — stessa metrica usata per le sestine proposte, cosi'
+// si possono confrontare direttamente.
+function computeRecentWithRank(draws) {
+  const n = draws.length
+  const startIdx = Math.max(1, n - RECENT_LOOKBACK)
+  const results = []
+  for (let t = n - 1; t >= startIdx; t--) {
+    const history = draws.slice(0, t)
+    const ranks = draws[t][2].map((num, p) => actualRank(history, p, num).rank)
+    const rankMedio = ranks.reduce((s, r) => s + r, 0) / ranks.length
+    results.push({ draw: draws[t], ranks, rankMedio })
+  }
+  return results
+}
 
 export default function Home({ draws }) {
   const topSestine = useMemo(() => generateTopSestine(draws, 10), [draws])
+  const recentWithRank = useMemo(() => computeRecentWithRank(draws), [draws])
   const lastDraw = draws[draws.length - 1]
 
   return (
@@ -93,22 +114,25 @@ export default function Home({ draws }) {
       <section className="home-section">
         <h3>📅 Ultime Estrazioni</h3>
         <div className="draws-table">
-          {draws.slice(-10).reverse().map((draw, idx) => (
+          {recentWithRank.map((item, idx) => (
             <div key={idx} className="draw-row">
-              <span className="draw-date">{draw[0]}</span>
-              <span className="draw-number">#{draw[1]}</span>
+              <span className="draw-date">{item.draw[0]}</span>
+              <span className="draw-number">#{item.draw[1]}</span>
               <div className="draw-numbers">
-                {draw[2].map((num, i) => (
-                  <span
-                    key={i}
-                    className="draw-num-ball"
-                    style={{ background: POS_COLORS[i % 6] }}
-                  >
-                    {num}
-                  </span>
+                {item.draw[2].map((num, i) => (
+                  <div key={i} className="draw-num-wrap">
+                    <span
+                      className="draw-num-ball"
+                      style={{ background: POS_COLORS[i % 6] }}
+                    >
+                      {num}
+                    </span>
+                    <span className="draw-num-rank">#{item.ranks[i]}</span>
+                  </div>
                 ))}
               </div>
-              <span className="draw-jolly">🎯 {draw[3]}</span>
+              <span className="draw-jolly">🎯 {item.draw[3]}</span>
+              <span className="draw-rank-medio">rank medio {item.rankMedio.toFixed(1)}</span>
             </div>
           ))}
         </div>
