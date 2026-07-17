@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { COLORS, storage } from '../utils/constants'
 import SEED_DRAWS from '../data/draws'
 import Header from './Header'
-import Dashboard from './Dashboard'
-import PositionTrends from './PositionTrends'
+import Home from './Home'
+import Statistics from './Statistics'
 import './App.css'
 
 export default function App() {
@@ -30,14 +30,9 @@ export default function App() {
       <Header draws={draws} activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="app-main">
-        {activeTab === 'dashboard' && (
-          <>
-            <Dashboard draws={draws} />
-            <PositionTrends draws={draws} />
-          </>
-        )}
+        {activeTab === 'dashboard' && <Home draws={draws} />}
         {activeTab === 'search' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>🔍 Ricerca - Coming Soon</div>}
-        {activeTab === 'stats' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>📈 Statistiche - Coming Soon</div>}
+        {activeTab === 'stats' && <Statistics draws={draws} />}
         {activeTab === 'settings' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>⚙️ Impostazioni - Coming Soon</div>}
       </main>
 
