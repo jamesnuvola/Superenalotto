@@ -53,6 +53,44 @@ function rankProbabilityWeight(position, rank) {
   return curve[bucket] ?? 0.001 // piccola probabilita' residua oltre la curva misurata
 }
 
+// Distribuzione reale del rank OSSERVATA PER POSIZIONE (motore a 5 regole,
+// 2.674 estrazioni reali in walk-forward). Usata per mostrare quanto il rank
+// di un numero scelto si discosta dalla fascia tipica DI QUELLA posizione
+// specifica, non da una media generica che nasconderebbe le differenze tra
+// posizioni forti (P1/P6) e deboli (P2-P5).
+export const RANK_BANDS_BY_POSITION = [
+  { p25: 7, mediana: 14, p75: 22 },  // P1
+  { p25: 11, mediana: 22, p75: 35 }, // P2
+  { p25: 14, mediana: 26, p75: 40 }, // P3
+  { p25: 12, mediana: 25, p75: 39 }, // P4
+  { p25: 12, mediana: 23, p75: 35 }, // P5
+  { p25: 6, mediana: 13, p75: 20 }   // P6
+]
+
+// Distribuzione reale del "rank medio sulle 6 posizioni" osservata nelle 2.674
+// estrazioni reali testate in walk-forward. Serve a calibrare onestamente le
+// aspettative: nessuna estrazione reale ha mai avuto un rank medio sotto 4.17
+// — se una sestina proposta ha un rank medio piu' basso, e' uno scenario piu'
+// ottimistico di qualunque cosa si sia mai verificata, non un'anomalia del calcolo.
+export const HISTORICAL_AVG_RANK = {
+  minimoStorico: 4.17,
+  p10: 13.00,
+  p25: 16.33,
+  mediana: 21.00,
+  p75: 26.83,
+  p90: 33.33
+}
+
+// Banda di plausibilita' (10°-90° percentile reale): le sestine generate
+// devono avere un rank medio dentro questa fascia, altrimenti vengono
+// scartate. Senza questo filtro, cercare tra migliaia di campioni e mostrare
+// sempre il punteggio piu' alto trova quasi per costruzione un profilo
+// estremo (tutti rank 1) mai osservato in 2.874 estrazioni reali. Il vincolo
+// non cambia in modo significativo il tasso di successo pratico (verificato:
+// 1.32 senza vincolo vs 1.37 con vincolo, su 60 estrazioni reali — nei
+// margini di rumore), ma evita di mostrare profili irrealistici.
+const PLAUSIBLE_AVG_RANK_RANGE = [HISTORICAL_AVG_RANK.p10, HISTORICAL_AVG_RANK.p90]
+
 function buildHistoricalSets(draws) {
   const sestine = new Set()
   const cinquine = new Set()
@@ -132,6 +170,9 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
     if (!ok) continue
     if (isDuplicate(chosen, historicalSets)) continue
 
+    const avgRank = dettaglio.reduce((sum, d) => sum + d.rank, 0) / dettaglio.length
+    if (avgRank < PLAUSIBLE_AVG_RANK_RANGE[0] || avgRank > PLAUSIBLE_AVG_RANK_RANGE[1]) continue
+
     const key = chosen.join(',')
     if (!found.has(key) || found.get(key).punteggioTotale < totalScore) {
       found.set(key, { numeri: chosen, punteggioTotale: totalScore, dettaglio })
@@ -141,6 +182,10 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
   return [...found.values()]
     .sort((a, b) => b.punteggioTotale - a.punteggioTotale)
     .slice(0, howMany)
+    .map(s => ({
+      ...s,
+      rankMedio: s.dettaglio.reduce((sum, d) => sum + d.rank, 0) / s.dettaglio.length
+    }))
 }
 
 // Statistiche di copertura reale per posizione (dal laboratorio di backtest,
