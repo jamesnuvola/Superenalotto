@@ -13,6 +13,23 @@ const POOL_WIDTH_BY_POSITION = [22, 35, 40, 40, 35, 20]
 const SAMPLES = 40000       // quante sestine "tentate" per trovare le migliori valide
 const RESULTS_WANTED = 10
 
+// Generatore pseudo-casuale deterministico (Park-Miller), seminato dal
+// dataset stesso: stesso storico -> stesso seme -> stesse sestine, sempre.
+// Cambia solo quando arriva una nuova estrazione reale (cambia il seme).
+function makeSeededRandom(seed) {
+  let s = seed % 2147483647
+  if (s <= 0) s += 2147483646
+  return function () {
+    s = (s * 16807) % 2147483647
+    return (s - 1) / 2147483646
+  }
+}
+
+function seedFromDraws(draws) {
+  const last = draws[draws.length - 1]
+  return draws.length * 100000 + (last ? last[1] : 0)
+}
+
 function buildHistoricalSets(draws) {
   const sestine = new Set()
   const cinquine = new Set()
@@ -49,13 +66,16 @@ function weightedPick(pool, rng) {
 }
 
 export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
+  const fullRanking = [] // classifica COMPLETA per posizione, per calcolare il rank vero da mostrare
   const perPosition = []
   for (let p = 0; p < 6; p++) {
-    perPosition.push(rankedCandidates(draws, p).slice(0, POOL_WIDTH_BY_POSITION[p]))
+    const full = rankedCandidates(draws, p)
+    fullRanking.push(full)
+    perPosition.push(full.slice(0, POOL_WIDTH_BY_POSITION[p]))
   }
 
   const historicalSets = buildHistoricalSets(draws)
-  const rng = Math.random
+  const rng = makeSeededRandom(seedFromDraws(draws))
   const found = new Map() // chiave = sestina, valore = { numeri, punteggioTotale, dettaglio }
 
   for (let s = 0; s < SAMPLES; s++) {
@@ -70,7 +90,13 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
       if (validPool.length === 0) { ok = false; break }
       const [num, score] = weightedPick(validPool, rng)
       chosen.push(num)
-      dettaglio.push({ posizione: p + 1, numero: num, punteggio: score })
+      dettaglio.push({
+        posizione: p + 1,
+        numero: num,
+        punteggio: score,
+        rank: fullRanking[p].findIndex(([n]) => n === num) + 1,
+        poolSize: fullRanking[p].length
+      })
       totalScore += score
     }
 
