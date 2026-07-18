@@ -9,7 +9,7 @@ import { rankedCandidates } from './scoring'
 // Larghezza del ventaglio per posizione, calibrata sul 75° percentile reale
 // del rank nel laboratorio di backtest (dove cade il 75% dei casi storici).
 // Ricalibrata dopo l'integrazione di VERTVOLATILITY nel punteggio composito.
-const POOL_WIDTH_BY_POSITION = [21, 35, 40, 39, 35, 20]
+const POOL_WIDTH_BY_POSITION = [21, 35, 41, 40, 35, 19]
 const SAMPLES = 40000       // quante sestine "tentate" per trovare le migliori valide
 const RESULTS_WANTED = 10
 
@@ -39,12 +39,12 @@ function seedFromDraws(draws) {
 // 1.23 -> 1.52 su 60 estrazioni reali in walk-forward).
 const RANK_BUCKET_WIDTH = 3
 const RANK_PROBABILITY_CURVES = [
-  [0.1447, 0.1253, 0.1051, 0.1114, 0.0969, 0.0898, 0.0812, 0.0636, 0.0471, 0.0359, 0.0254, 0.0221, 0.0168, 0.0108], // P1
-  [0.077, 0.0793, 0.0673, 0.0673, 0.0696, 0.0752, 0.0557, 0.0613, 0.0639, 0.0546, 0.0628, 0.0494, 0.0378, 0.0363], // P2
-  [0.0654, 0.0625, 0.0583, 0.0509, 0.0606, 0.058, 0.0591, 0.0621, 0.0557, 0.0576, 0.0501, 0.0524, 0.0497, 0.0385], // P3
-  [0.0688, 0.0666, 0.0711, 0.0643, 0.055, 0.0662, 0.058, 0.0572, 0.0591, 0.0527, 0.0546, 0.0381, 0.0505, 0.0374], // P4
-  [0.0681, 0.074, 0.0696, 0.0718, 0.058, 0.0763, 0.0654, 0.0658, 0.0621, 0.0561, 0.0557, 0.0542, 0.0453, 0.0404], // P5
-  [0.1451, 0.1354, 0.1141, 0.1062, 0.1197, 0.0942, 0.0774, 0.0595, 0.0378, 0.0292, 0.0224, 0.0176, 0.0079, 0.012] // P6
+  [0.1414, 0.1294, 0.1264, 0.1017, 0.0984, 0.0939, 0.0718, 0.055, 0.0441, 0.0322, 0.0202, 0.018, 0.0097, 0.0097], // P1
+  [0.0722, 0.0789, 0.0767, 0.074, 0.0696, 0.0606, 0.0688, 0.061, 0.0561, 0.0572, 0.0531, 0.0415, 0.04, 0.0381], // P2
+  [0.0666, 0.0628, 0.0617, 0.0681, 0.0651, 0.0576, 0.0449, 0.0587, 0.0527, 0.052, 0.0438, 0.0475, 0.043, 0.0441], // P3
+  [0.0752, 0.0673, 0.0639, 0.0602, 0.0617, 0.0572, 0.0617, 0.061, 0.0531, 0.0535, 0.043, 0.0475, 0.0438, 0.0374], // P4
+  [0.0711, 0.0699, 0.0714, 0.0733, 0.077, 0.0662, 0.0636, 0.0662, 0.0539, 0.0535, 0.0583, 0.0456, 0.0419, 0.04], // P5
+  [0.1436, 0.1537, 0.1189, 0.1129, 0.1066, 0.0894, 0.0748, 0.0456, 0.0389, 0.0266, 0.0142, 0.0108, 0.015, 0.0116] // P6
 ]
 
 function rankProbabilityWeight(position, rank) {
@@ -60,11 +60,11 @@ function rankProbabilityWeight(position, rank) {
 // posizioni forti (P1/P6) e deboli (P2-P5).
 export const RANK_BANDS_BY_POSITION = [
   { p25: 6, mediana: 13, p75: 21 },  // P1
-  { p25: 11, mediana: 22, p75: 35 }, // P2
-  { p25: 13, mediana: 26, p75: 40 }, // P3
-  { p25: 11, mediana: 24, p75: 39 }, // P4
+  { p25: 10, mediana: 21, p75: 35 }, // P2
+  { p25: 12, mediana: 25, p75: 41 }, // P3
+  { p25: 12, mediana: 24, p75: 40 }, // P4
   { p25: 11, mediana: 22, p75: 35 }, // P5
-  { p25: 6, mediana: 12, p75: 20 }   // P6
+  { p25: 5, mediana: 12, p75: 19 }   // P6
 ]
 
 // Distribuzione reale del "rank medio sulle 6 posizioni" osservata nelle 2.674
@@ -73,12 +73,12 @@ export const RANK_BANDS_BY_POSITION = [
 // — se una sestina proposta ha un rank medio piu' basso, e' uno scenario piu'
 // ottimistico di qualunque cosa si sia mai verificata, non un'anomalia del calcolo.
 export const HISTORICAL_AVG_RANK = {
-  minimoStorico: 5.33,
+  minimoStorico: 5.67,
   p10: 12.67,
-  p25: 16.00,
-  mediana: 20.50,
-  p75: 26.33,
-  p90: 33.17
+  p25: 16.17,
+  mediana: 21.00,
+  p75: 27.00,
+  p90: 33.83
 }
 
 // Banda di plausibilita' (10°-90° percentile reale): le sestine generate
