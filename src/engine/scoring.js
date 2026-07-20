@@ -80,6 +80,7 @@ export function clusterScores(history, position, maxLag = CLUSTER_MAX_LAG) {
 }
 
 const VOLATILITY_WINDOW = 20
+const COLDH_WINDOW = 10
 
 export function volatilityScores(history, position, window = VOLATILITY_WINDOW) {
   const recent = history.slice(-window).map(d => d[2][position])
@@ -94,17 +95,37 @@ export function volatilityScores(history, position, window = VOLATILITY_WINDOW) 
   return scores
 }
 
-// Punteggio composito (Metodo A validato): somma delle 5 regole normalizzate.
+// COLD_H: l'INVERSO di HOT_H (frequenza globale). HOT_H (i numeri piu' usciti
+// ovunque di recente) ha lift NEGATIVO (0.55x-0.80x) — invertendolo, i numeri
+// MENO usciti ovunque di recente hanno lift positivo e robusto (1.19x-1.59x
+// standalone). Validato anche dentro il composito completo: migliora la
+// maggior parte delle posizioni.
+export function coldHScores(history, position, window = COLDH_WINDOW) {
+  const recent = history.slice(-window)
+  const freq = new Map()
+  for (const d of recent) {
+    for (const n of d[2]) freq.set(n, (freq.get(n) || 0) + 1)
+  }
+  const allSeen = new Set(history.map(d => d[2][position]))
+  const scores = new Map()
+  for (const n of allSeen) {
+    scores.set(n, 1 / (1 + (freq.get(n) || 0)))
+  }
+  return scores
+}
+
+// Punteggio composito (Metodo A validato): somma delle 6 regole normalizzate.
 export function compositeScores(history, position) {
   const hot = normalize(hotScores(history, position))
   const delay = normalize(delayScores(history, position))
   const dec = normalize(decadeScores(history, position))
   const clus = normalize(clusterScores(history, position))
   const vol = normalize(volatilityScores(history, position))
-  const all = new Set([...hot.keys(), ...delay.keys(), ...dec.keys(), ...clus.keys(), ...vol.keys()])
+  const cold = normalize(coldHScores(history, position))
+  const all = new Set([...hot.keys(), ...delay.keys(), ...dec.keys(), ...clus.keys(), ...vol.keys(), ...cold.keys()])
   const scores = new Map()
   for (const n of all) {
-    scores.set(n, (hot.get(n) || 0) + (delay.get(n) || 0) + (dec.get(n) || 0) + (clus.get(n) || 0) + (vol.get(n) || 0))
+    scores.set(n, (hot.get(n) || 0) + (delay.get(n) || 0) + (dec.get(n) || 0) + (clus.get(n) || 0) + (vol.get(n) || 0) + (cold.get(n) || 0))
   }
   return scores
 }
@@ -125,19 +146,9 @@ export function actualRank(history, position, actualNumber) {
   }
 }
 
-// Rifinitura opzionale (Metodo B dentro il pool di A): vota ogni candidato
-// del pool su quante regole singole lo mettono nel loro top-15.
-export function refineWithVotes(history, position, poolNumbers, topN = 15) {
-  const dec = decadeScores(history, position)
-  const hot = hotScores(history, position)
-  const clus = clusterScores(history, position)
-  const decTop = new Set([...dec.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN).map(([n]) => n))
-  const hotTop = new Set([...hot.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN).map(([n]) => n))
-  const clusTop = new Set([...clus.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN).map(([n]) => n))
-  return poolNumbers.map(n => ({
-    numero: n,
-    voti: (decTop.has(n) ? 1 : 0) + (hotTop.has(n) ? 1 : 0) + (clusTop.has(n) ? 1 : 0)
-  }))
-}
+// Nota storica: una funzione di rifinitura per voti (refineWithVotes,
+// basata su DECADE+HOT_V+CLUSTER_V) è stata testata come possibile
+// riordino del pool e rimossa dopo aver verificato che peggiora o è
+// neutra su tutte le posizioni. Dettagli nel documento di sessione.
 
 export const POSITION_LABELS = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']
