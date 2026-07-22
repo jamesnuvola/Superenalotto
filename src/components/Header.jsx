@@ -7,8 +7,6 @@ export default function Header({ draws, activeTab, setActiveTab }) {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    // Aggiunge un parametro univoco per forzare il browser (o l'app salvata
-    // in Home) a scaricare una copia fresca invece di usare la cache.
     window.location.href = window.location.pathname + '?_=' + Date.now()
   }
 
@@ -46,6 +44,12 @@ export default function Header({ draws, activeTab, setActiveTab }) {
           onClick={() => setActiveTab('dashboard')}
         >
           📊 Dashboard
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'wlf' ? 'active' : ''}`}
+          onClick={() => setActiveTab('wlf')}
+        >
+          🍀 Win for Life
         </button>
         <button 
           className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`}
