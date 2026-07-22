@@ -1,0 +1,27 @@
+name: Update Win for Life draws
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # ogni ora
+  workflow_dispatch:       # per esecuzione manuale
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm install node-fetch cheerio
+        working-directory: winforlife
+      - name: Run update script
+        run: node update-wlf.mjs
+        working-directory: winforlife
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add winforlife/winforlife_draws.json
+          git diff --staged --quiet || (git commit -m "Update Win for Life draws" && git push)
