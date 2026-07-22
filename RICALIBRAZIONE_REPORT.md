@@ -1,6 +1,6 @@
-# Report di ricalibrazione automatica — 2026-07-19
+# Report di ricalibrazione automatica — 2026-07-22
 
-Estrazioni analizzate: 2886. Campione di test per il rank isolato: ultime 1200.
+Estrazioni analizzate: 2887. Campione di test per il rank isolato: ultime 1200.
 
 **Importante:** questo report testa SOLO il rank isolato (veloce, eseguibile periodicamente). La sessione di ricerca ha mostrato più volte che un miglioramento qui NON garantisce un miglioramento nella costruzione reale delle sestine (test difficile) — a volte lo ribalta. **Ogni candidato qui sotto va verificato end-to-end in una sessione dedicata prima di essere adottato, mai applicato automaticamente.**
 
@@ -12,7 +12,7 @@ Nessuna variante testata ha mostrato un miglioramento statisticamente significat
 ## Dettaglio completo di tutte le varianti testate in questo ciclo
 
 - **hotWindow=5**: migliora in 3/6 posizioni (z per posizione: -1.18, 0.29, -0.48, 2.12, -0.16, 1.68)
-- **hotWindow=15**: migliora in 4/6 posizioni (z per posizione: 0.66, 0.16, -0.54, 0.16, -0.32, 1.70)
+- **hotWindow=15**: migliora in 4/6 posizioni (z per posizione: 0.66, 0.31, -0.54, 0.16, -0.32, 1.70)
 - **hotWindow=20**: migliora in 5/6 posizioni (z per posizione: 1.67, 0.40, 0.75, 0.14, -0.59, 3.67)
 - **decadeWindow=15**: migliora in 4/6 posizioni (z per posizione: -1.41, 0.96, 0.14, 1.05, -0.31, 2.54)
 - **decadeWindow=25**: migliora in 5/6 posizioni (z per posizione: 0.69, 0.51, -1.13, 1.83, 0.30, 2.33)
