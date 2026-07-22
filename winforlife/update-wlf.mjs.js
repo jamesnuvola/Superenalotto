@@ -1,54 +1,19 @@
-import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
-import fs from 'fs';
+Run node update-wlf.mjs
+/home/runner/work/Superenalotto/Superenalotto/node_modules/undici/lib/web/webidl/index.js:537
+webidl.is.File = webidl.util.MakeTypeAssertion(File)
+                                               ^
 
-const URL = 'https://www.estrazionelotto.it/archivio-winforlife';
-const DATA_FILE = 'winforlife_draws.json';
+ReferenceError: File is not defined
+    at Object.<anonymous> (/home/runner/work/Superenalotto/Superenalotto/node_modules/undici/lib/web/webidl/index.js:537:48)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/home/runner/work/Superenalotto/Superenalotto/node_modules/undici/lib/web/fetch/util.js:12:20)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
 
-async function scrape() {
-  const res = await fetch(URL);
-  const html = await res.text();
-  const $ = cheerio.load(html);
-  const draws = [];
-
-  // La tabella ha righe con classe "riga" (o simile). Ogni riga contiene:
-  // <td>numero concorso</td> <td>data</td> <td>ora</td> <td>n1</td> ... <td>n10</td> <td>numerone</td>
-  $('table tr').each((i, row) => {
-    const cols = $(row).find('td');
-    if (cols.length >= 13) {
-      const numero = parseInt($(cols[0]).text().trim(), 10);
-      const data = $(cols[1]).text().trim(); // formato GG/MM/AAAA
-      const ora = $(cols[2]).text().trim();
-      const numbers = [];
-      for (let j = 3; j <= 12; j++) {
-        numbers.push(parseInt($(cols[j]).text().trim(), 10));
-      }
-      const numerone = parseInt($(cols[13]).text().trim(), 10);
-      if (!isNaN(numero) && numbers.length === 10 && !isNaN(numerone)) {
-        const [day, month, year] = data.split('/');
-        const datetime = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${ora}`;
-        draws.push({ datetime, numbers, numerone, numero });
-      }
-    }
-  });
-
-  // Ordina per datetime crescente
-  draws.sort((a, b) => a.datetime.localeCompare(b.datetime));
-
-  // Unisci con dati esistenti se presenti, evitando duplicati
-  let existing = [];
-  if (fs.existsSync(DATA_FILE)) {
-    existing = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  }
-  const existingKeys = new Set(existing.map(d => d.datetime));
-  for (const d of draws) {
-    if (!existingKeys.has(d.datetime)) {
-      existing.push(d);
-    }
-  }
-  existing.sort((a, b) => a.datetime.localeCompare(b.datetime));
-  fs.writeFileSync(DATA_FILE, JSON.stringify(existing, null, 2));
-  console.log(`Aggiornamento completato: ${existing.length} estrazioni totali.`);
-}
-
-scrape().catch(console.error);
+Node.js v18.20.8
+Error: Process completed with exit code 1.
