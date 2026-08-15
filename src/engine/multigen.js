@@ -5,6 +5,7 @@
 // restringere troppo il ventaglio butta via combinazioni realmente possibili.
 
 import { rankedCandidates } from './scoring'
+import { fattorePeso } from './dominant-band'
 
 // Larghezza del ventaglio per posizione, calibrata sul 75° percentile reale
 // del rank nel laboratorio di backtest (dove cade il 75% dei casi storici).
@@ -159,10 +160,16 @@ function solveDP(perPosition) {
   return numeri
 }
 
-export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
+export function generateTopSestine(draws, howMany = RESULTS_WANTED, opts = {}) {
   const fullRanking = [] // classifica COMPLETA per posizione, per calcolare il rank vero da mostrare
   const perPosition = [] // [numero, pesoEmpirico] ordinato per NUMERO (serve alla DP)
   const infoPerNumero = [] // Map numero -> {score, rank} per ricostruire il dettaglio dopo
+
+  // REGOLA BANDA DOMINANTE (opzionale): se viene passato lo stato per posizione
+  // (opts.statiBandaDominante, da statoRegolaPerPosizione), il peso di ogni
+  // candidato viene moltiplicato per fattorePeso() — spinge verso o via dalla
+  // banda dominante secondo lo stato INCLUDI/ESCLUDI/SPENTA di quella posizione.
+  const stati = opts.statiBandaDominante || null
 
   for (let p = 0; p < 6; p++) {
     const full = rankedCandidates(draws, p)
@@ -171,7 +178,8 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED) {
     const pool = full.slice(0, POOL_WIDTH_BY_POSITION[p]).map(([num, score], idx) => {
       const rank = idx + 1
       info.set(num, { score, rank })
-      return [num, rankProbabilityWeight(p, rank)]
+      const fattore = stati ? fattorePeso(stati[p], rank) : 1
+      return [num, rankProbabilityWeight(p, rank) * fattore]
     })
     pool.sort((a, b) => a[0] - b[0]) // ordina per NUMERO crescente, richiesto dalla DP
     perPosition.push(pool)
