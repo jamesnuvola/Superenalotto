@@ -1,169 +1,125 @@
-import { useMemo } from 'react'
-import { POS_COLORS, utils } from '../utils/constants'
-import NumberRankTable from './NumberRankTable'
-import './Dashboard.css'
+import { useMemo, useState } from 'react'
+import { v, styles, MONO } from '../utils/theme'
+import { rankedCandidates, POSITION_LABELS } from '../engine/scoring'
+import { utils } from '../utils/constants'
 
-function parseDataIT(dataStr) {
-  const [g, m, a] = dataStr.split('/').map(Number)
-  return { giorno: g, mese: m, anno: a }
+function parseDataIT(s) { const [g, m, a] = s.split('/').map(Number); return { mese: m, anno: a } }
+
+function buildGrid(draws) {
+  const grid = {}
+  for (let n = 1; n <= 90; n++) grid[n] = new Array(6).fill(null)
+  for (let p = 0; p < 6; p++) rankedCandidates(draws, p).forEach(([num], idx) => { grid[num][p] = idx + 1 })
+  return grid
 }
-
-function frequenzaNelPeriodo(draws, filtro) {
-  const freq = {}
-  for (const draw of draws) {
-    const { mese, anno } = parseDataIT(draw[0])
-    if (!filtro(mese, anno)) continue
-    for (const num of draw[2]) freq[num] = (freq[num] || 0) + 1
-  }
-  return freq
+function rankBg(rank) {
+  if (rank === null) return 'transparent'
+  if (rank <= 10) return 'rgba(0,212,255,0.35)'
+  if (rank <= 20) return 'rgba(0,212,255,0.18)'
+  if (rank <= 40) return 'rgba(0,212,255,0.08)'
+  return 'rgba(255,255,255,0.02)'
+}
+function freqPeriodo(draws, filtro) {
+  const f = {}
+  for (const d of draws) { const { mese, anno } = parseDataIT(d[0]); if (!filtro(mese, anno)) continue; for (const n of d[2]) f[n] = (f[n] || 0) + 1 }
+  return f
 }
 
 export default function Griglia({ draws }) {
+  const grid = useMemo(() => buildGrid(draws), [draws])
+  const [sortPos, setSortPos] = useState(null)
+  const lastDraw = draws[draws.length - 1]
+
   const stats = useMemo(() => {
-    if (draws.length === 0) return null
-    const now = new Date()
-    const meseCorrente = now.getMonth() + 1
-    const annoCorrente = now.getFullYear()
-
-    const freqTotale = {}
-    draws.forEach(draw => draw[2].forEach(num => { freqTotale[num] = (freqTotale[num] || 0) + 1 }))
-
-    const freqMese = frequenzaNelPeriodo(draws, (m, a) => m === meseCorrente && a === annoCorrente)
-    const freqAnno = frequenzaNelPeriodo(draws, (m, a) => a === annoCorrente)
-
-    const attesoPerNumero = (draws.length * 6) / 90
-    const numeriUnici = Object.keys(freqTotale).length
-
+    const now = new Date(), m = now.getMonth() + 1, a = now.getFullYear()
+    const atteso = (draws.length * 6) / 90
     return {
-      topNumbers: utils.getTopNumbers(draws, 10),
-      bottomNumbers: utils.getBottomNumbers(draws, 10),
-      freqMese,
-      freqAnno,
-      attesoPerNumero,
-      numeriUnici,
-      totalDraws: draws.length,
-      meseCorrente,
-      annoCorrente
+      top: utils.getTopNumbers(draws, 10),
+      bottom: utils.getBottomNumbers(draws, 10),
+      mese: freqPeriodo(draws, (mm, aa) => mm === m && aa === a),
+      anno: freqPeriodo(draws, (mm, aa) => aa === a),
+      atteso, m, a
     }
   }, [draws])
 
-  if (!stats) return <div className="dashboard">Nessun dato disponibile</div>
+  const numbers = useMemo(() => {
+    const nums = Array.from({ length: 90 }, (_, i) => i + 1)
+    if (sortPos === null) return nums
+    return nums.slice().sort((x, y) => (grid[x][sortPos] ?? 999) - (grid[y][sortPos] ?? 999))
+  }, [grid, sortPos])
 
-  const usciteMese = Object.entries(stats.freqMese).sort((a, b) => b[1] - a[1])
-  const usciteAnno = Object.entries(stats.freqAnno).sort((a, b) => b[1] - a[1])
+  const th = (active) => ({ padding: '6px 4px', fontSize: 11, color: active ? v.accent : v.muted, cursor: 'pointer', fontFamily: MONO, borderBottom: `1px solid ${v.border}` })
+  const usciteMese = Object.entries(stats.mese).sort((a, b) => b[1] - a[1])
+  const usciteAnno = Object.entries(stats.anno).sort((a, b) => b[1] - a[1])
+
+  const NumList = ({ title, rows, color }) => (
+    <div style={{ flex: '1 1 240px' }}>
+      <h2 style={styles.h2}>{title}</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {rows.length === 0 && <span style={styles.caption}>Nessun dato.</span>}
+        {rows.map(([num, count], idx) => (
+          <div key={num} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <span style={{ fontFamily: MONO, color: v.muted, minWidth: 20 }}>{idx + 1}</span>
+            <span style={{ fontFamily: MONO, color: color || v.text, fontWeight: 700, minWidth: 24 }}>{num}</span>
+            <span style={{ color: v.muted, fontSize: 12 }}>{count} uscite (atteso {stats.atteso.toFixed(1)})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
-    <div className="dashboard">
-      <section className="dashboard-section">
-        <h2>📊 Panoramica</h2>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <span className="stat-icon">📁</span>
-            <span className="stat-label">Estrazioni Totali</span>
-            <span className="stat-number">{stats.totalDraws}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">🎯</span>
-            <span className="stat-label">Numeri Usciti Almeno Una Volta</span>
-            <span className="stat-number">{stats.numeriUnici}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">📈</span>
-            <span className="stat-label">Frequenza Attesa per Numero</span>
-            <span className="stat-number">{stats.attesoPerNumero.toFixed(1)}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">🗓️</span>
-            <span className="stat-label">Usciti Questo Mese</span>
-            <span className="stat-number">{Object.keys(stats.freqMese).length}</span>
-          </div>
+    <div>
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Panoramica</h2>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[['Estrazioni', draws.length], ['Attesa/numero', stats.atteso.toFixed(1)], ['Usciti nel mese', Object.keys(stats.mese).length], ['Nel mese ' + stats.m + '/' + stats.a, usciteMese.length]].map(([l, val]) => (
+            <div key={l} style={{ ...styles.card, flex: '1 1 130px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: v.muted }}>{l}</div>
+              <div style={{ fontSize: 22, color: v.accent, fontFamily: MONO }}>{val}</div>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="dashboard-section">
-        <div className="two-column">
-          <div className="column">
-            <h3>🗓️ Usciti nel mese corrente ({stats.meseCorrente}/{stats.annoCorrente})</h3>
-            <div className="number-list">
-              {usciteMese.length === 0 && <p className="rank-table-caption">Nessuna estrazione questo mese.</p>}
-              {usciteMese.slice(0, 15).map(([num, count], idx) => (
-                <div key={num} className="number-item">
-                  <div className="rank-badge">{idx + 1}</div>
-                  <div className="number-info">
-                    <span className="number-value">{num}</span>
-                    <span className="number-label">Uscite: {count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="column">
-            <h3>📆 Totale anno {stats.annoCorrente}</h3>
-            <div className="number-list">
-              {usciteAnno.slice(0, 15).map(([num, count], idx) => (
-                <div key={num} className="number-item">
-                  <div className="rank-badge">{idx + 1}</div>
-                  <div className="number-info">
-                    <span className="number-value">{num}</span>
-                    <span className="number-label">
-                      Uscite: {count} · atteso {stats.attesoPerNumero > 0 ? ((count - stats.attesoPerNumero * (usciteAnno.length ? 1 : 0)).toFixed(1)) : '-'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <section style={{ ...styles.section, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <NumList title={`Usciti nel mese ${stats.m}/${stats.a}`} rows={usciteMese.slice(0, 12)} color={v.warm} />
+        <NumList title={`Totale anno ${stats.a}`} rows={usciteAnno.slice(0, 12)} color={v.green} />
       </section>
 
-      <section className="dashboard-section">
-        <div className="two-column">
-          <div className="column">
-            <h3>🔥 Top 10 più frequenti (storico completo)</h3>
-            <div className="number-list">
-              {stats.topNumbers.map((item, idx) => (
-                <div key={item.num} className="number-item">
-                  <div className="rank-badge">{idx + 1}</div>
-                  <div className="number-info">
-                    <span className="number-value">{item.num}</span>
-                    <span className="number-label">Frequenza: {item.count} (atteso {stats.attesoPerNumero.toFixed(1)})</span>
-                  </div>
-                  <div className="number-bar">
-                    <div
-                      className="number-bar-fill"
-                      style={{ width: `${(item.count / stats.topNumbers[0].count) * 100}%`, background: POS_COLORS[idx % 6] }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="column">
-            <h3>❄️ Top 10 meno frequenti (storico completo)</h3>
-            <div className="number-list">
-              {stats.bottomNumbers.map((item, idx) => (
-                <div key={item.num} className="number-item">
-                  <div className="rank-badge" style={{ background: '#4488ff' }}>{idx + 1}</div>
-                  <div className="number-info">
-                    <span className="number-value">{item.num}</span>
-                    <span className="number-label">Frequenza: {item.count} (atteso {stats.attesoPerNumero.toFixed(1)})</span>
-                  </div>
-                  <div className="number-bar">
-                    <div
-                      className="number-bar-fill"
-                      style={{ width: `${(item.count / stats.topNumbers[0].count) * 100}%`, background: '#4488ff' }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <section style={{ ...styles.section, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <NumList title="Più frequenti (storico)" rows={stats.top.map(t => [t.num, t.count])} color={v.hot} />
+        <NumList title="Meno frequenti (storico)" rows={stats.bottom.map(t => [t.num, t.count])} color={v.cold} />
       </section>
 
-      <NumberRankTable draws={draws} />
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Rank di tutti i 90 numeri per posizione</h2>
+        <p style={styles.caption}>
+          Aggiornato al {lastDraw ? lastDraw[0] : '-'}. Tocca una posizione per ordinare. Cella vuota =
+          numero mai candidato osservato in quella posizione.
+        </p>
+        <div style={{ overflowX: 'auto', ...styles.card, padding: 0 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: MONO }}>
+            <thead>
+              <tr>
+                <th style={th(sortPos === null)} onClick={() => setSortPos(null)}>N.</th>
+                {POSITION_LABELS.map((l, p) => (
+                  <th key={p} style={th(sortPos === p)} onClick={() => setSortPos(p)}>{l}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {numbers.map(n => (
+                <tr key={n}>
+                  <td style={{ padding: '4px 6px', color: v.text, textAlign: 'center', fontWeight: 700 }}>{n}</td>
+                  {grid[n].map((rank, p) => (
+                    <td key={p} style={{ padding: '4px 6px', textAlign: 'center', color: v.text, background: rankBg(rank) }}>{rank ?? '–'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }

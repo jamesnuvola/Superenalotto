@@ -1,92 +1,74 @@
 import { useMemo, useState } from 'react'
-import { POS_COLORS, CONFIG } from '../utils/constants'
+import { v, P, styles, ballStyle, MONO } from '../utils/theme'
 import rankHistory from '../data/rank-history.json'
-import './Home.css'
-import './sonar-ui.css'
 
-// L'archivio dei rank (src/data/rank-history.json) viene popolato in modo
-// incrementale da scripts/update-draws.mjs ad ogni nuova estrazione reale
-// (fino a un massimo di 500 voci più recenti) — le estrazioni più vecchie di
-// quella finestra non hanno un rank calcolato e vengono mostrate senza.
+const PER_PAGE = 20
+
 function buildRankIndex() {
   const idx = new Map()
-  for (const entry of rankHistory) {
-    idx.set(`${entry.data}_${entry.concorso}`, entry)
-  }
+  for (const e of rankHistory) idx.set(`${e.data}_${e.concorso}`, e)
   return idx
+}
+
+function Pager({ page, totalPages, setPage }) {
+  const btn = (dis) => ({
+    background: v.card, border: `1px solid ${v.borderHi}`, color: v.text,
+    padding: '8px 14px', borderRadius: 8, cursor: dis ? 'default' : 'pointer',
+    fontSize: 13, opacity: dis ? 0.35 : 1, fontFamily: 'inherit'
+  })
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '16px 0' }}>
+      <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={btn(page === 0)}>← Più recenti</button>
+      <span style={{ color: v.muted, fontSize: 13, fontFamily: MONO }}>{page + 1} / {totalPages}</span>
+      <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} style={btn(page >= totalPages - 1)}>Meno recenti →</button>
+    </div>
+  )
 }
 
 export default function Storico({ draws }) {
   const rankIndex = useMemo(buildRankIndex, [])
-  const perPage = CONFIG.DRAWS_PER_PAGE || 20
   const [page, setPage] = useState(0)
-
-  // Più recenti prima
   const ordered = useMemo(() => [...draws].reverse(), [draws])
-  const totalPages = Math.max(1, Math.ceil(ordered.length / perPage))
-  const start = page * perPage
-  const pageItems = ordered.slice(start, start + perPage)
+  const totalPages = Math.max(1, Math.ceil(ordered.length / PER_PAGE))
+  const start = page * PER_PAGE
+  const items = ordered.slice(start, start + PER_PAGE)
 
   return (
-    <div className="home">
-      <section className="home-section">
-        <h2>📅 Storico completo ({draws.length} estrazioni)</h2>
-        <p className="home-caption">
+    <div>
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Storico completo — {draws.length} estrazioni</h2>
+        <p style={styles.caption}>
           Tutte le estrazioni reali, dalla più recente. Il rank (posizione nella classifica dei
-          candidati del motore, calcolato walk-forward) è disponibile per le estrazioni più recenti,
-          quelle già registrate in rank-history.json; per lo storico più lontano nel tempo viene
-          mostrato solo il numero uscito.
+          candidati, walk-forward) è disponibile per le estrazioni già registrate; per lo storico più
+          lontano mostriamo solo i numeri.
         </p>
 
-        <div className="storico-pagination">
-          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
-            ← Più recenti
-          </button>
-          <span className="storico-pagination-label">
-            pagina {page + 1} / {totalPages}
-          </span>
-          <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-            Meno recenti →
-          </button>
-        </div>
+        <Pager page={page} totalPages={totalPages} setPage={setPage} />
 
-        <div className="draws-table">
-          {pageItems.map((draw, idx) => {
-            const entry = rankIndex.get(`${draw[0]}_${draw[1]}`)
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map((draw, i) => {
+            const e = rankIndex.get(`${draw[0]}_${draw[1]}`)
             return (
-              <div key={start + idx} className="draw-row">
-                <span className="draw-date">{draw[0]}</span>
-                <span className="draw-number">#{draw[1]}</span>
-                <div className="draw-numbers">
-                  {draw[2].map((num, i) => (
-                    <div key={i} className="draw-num-wrap">
-                      <span className="draw-num-ball" style={{ background: POS_COLORS[i % 6] }}>
-                        {num}
-                      </span>
-                      {entry && <span className="draw-num-rank">#{entry.ranks[i]}</span>}
+              <div key={start + i} style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: MONO, color: v.muted, fontSize: 12, minWidth: 82 }}>{draw[0]}</span>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                  {draw[2].map((num, j) => (
+                    <div key={j} style={{ textAlign: 'center' }}>
+                      <span style={ballStyle(P[j % 6], 30, 12)}>{num}</span>
+                      {e && <div style={{ fontSize: 9, color: v.muted, fontFamily: MONO }}>#{e.ranks[j]}</div>}
                     </div>
                   ))}
                 </div>
-                <span className="draw-jolly">🎯 {draw[3]}</span>
-                {entry
-                  ? <span className="draw-rank-medio">rank medio {entry.rankMedio.toFixed(1)}</span>
-                  : <span className="draw-rank-unavailable">rank non disponibile</span>}
+                <span style={{ fontFamily: MONO, color: v.gold, fontSize: 12 }}>J {draw[3]}</span>
+                {e
+                  ? <span style={{ fontSize: 11, color: v.dim, fontFamily: MONO }}>rm {e.rankMedio.toFixed(1)}</span>
+                  : <span style={{ fontSize: 11, color: v.dim, fontStyle: 'italic' }}>rank n/d</span>}
               </div>
             )
           })}
         </div>
 
-        <div className="storico-pagination">
-          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
-            ← Più recenti
-          </button>
-          <span className="storico-pagination-label">
-            pagina {page + 1} / {totalPages}
-          </span>
-          <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-            Meno recenti →
-          </button>
-        </div>
+        <Pager page={page} totalPages={totalPages} setPage={setPage} />
       </section>
     </div>
   )

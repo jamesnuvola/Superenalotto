@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
-import { POS_COLORS } from '../utils/constants'
+import { v, P, styles, ballStyle, MONO } from '../utils/theme'
 import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
 import { actualRank, POSITION_LABELS } from '../engine/scoring'
 import { statoRegolaPerPosizione } from '../engine/dominant-band'
 import Sparkline from './Sparkline'
-import './Home.css'
-import './sonar-ui.css'
 
 const RECENT_LOOKBACK = 10
 const STATI_FORZABILI = ['AUTO', 'INCLUDI', 'ESCLUDI', 'SPENTA']
@@ -13,68 +11,76 @@ const STATI_FORZABILI = ['AUTO', 'INCLUDI', 'ESCLUDI', 'SPENTA']
 function computeRecentWithRank(draws) {
   const n = draws.length
   const startIdx = Math.max(1, n - RECENT_LOOKBACK)
-  const results = []
+  const out = []
   for (let t = n - 1; t >= startIdx; t--) {
     const history = draws.slice(0, t)
     const ranks = draws[t][2].map((num, p) => actualRank(history, p, num).rank)
     const rankMedio = ranks.reduce((s, r) => s + r, 0) / ranks.length
-    results.push({ draw: draws[t], ranks, rankMedio })
+    out.push({ draw: draws[t], ranks, rankMedio })
   }
-  return results
+  return out
 }
+
+const statoColor = { INCLUDI: v.green, ESCLUDI: v.hot, SPENTA: v.muted }
 
 export default function Genera({ draws }) {
   const statiAuto = useMemo(() => statoRegolaPerPosizione(draws), [draws])
-  const [override, setOverride] = useState({}) // { posizione: 'AUTO'|'INCLUDI'|'ESCLUDI'|'SPENTA' }
+  const [override, setOverride] = useState({})
   const [selectedIdx, setSelectedIdx] = useState(0)
 
   const statiEffettivi = useMemo(
     () => statiAuto.map((s, p) => (override[p] && override[p] !== 'AUTO' ? { ...s, stato: override[p] } : s)),
     [statiAuto, override]
   )
-
   const topSestine = useMemo(
     () => generateTopSestine(draws, 10, { statiBandaDominante: statiEffettivi }),
     [draws, statiEffettivi]
   )
-  const recentWithRank = useMemo(() => computeRecentWithRank(draws), [draws])
-  const lastDraw = draws[draws.length - 1]
-
-  const selezionata = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
+  const recent = useMemo(() => computeRecentWithRank(draws), [draws])
+  const sel = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
+  const best = topSestine[0]
 
   return (
-    <div className="home">
-      <section className="home-section">
-        <h2>🎛️ Regola banda dominante</h2>
-        <p className="home-caption">
-          Per ogni posizione, la fascia di rank che negli ultimi 6 mesi (e nell'ultima settimana, con lo
-          stesso segno) ha prodotto più numeri del previsto. "Auto" usa il segno rilevato ora; puoi forzare
-          una posizione a favorire, evitare o disattivare la regola. Vantaggio piccolo (2-3 punti %),
-          da trattare come indicatore.
+    <div>
+      {/* Regola banda dominante */}
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Regola banda dominante</h2>
+        <p style={styles.caption}>
+          Per ogni posizione, la fascia di rank che negli ultimi 6 mesi (e nell'ultima settimana, con
+          lo stesso segno) ha prodotto più numeri del previsto. "Auto" usa il segno rilevato ora; puoi
+          forzare la posizione. Vantaggio piccolo — indicatore, non certezza.
         </p>
-        <div className="banda-panel">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
           {POSITION_LABELS.map((label, p) => {
             const s = statiEffettivi[p]
             const cur = override[p] || 'AUTO'
             return (
-              <div className="banda-card" key={label}>
-                <div className="banda-card-header">
-                  <strong>{label}</strong>
-                  <span className={`banda-stato ${s.stato.toLowerCase()}`}>{s.stato}</span>
+              <div key={label} style={styles.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <strong style={{ fontFamily: MONO, color: v.text }}>{label}</strong>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: statoColor[s.stato] }}>{s.stato}</span>
                 </div>
-                <div className="banda-detail">
+                <div style={{ fontSize: 11, color: v.muted, marginBottom: 8 }}>
                   banda {s.banda} · 6m {s.v6 > 0 ? '+' : ''}{s.v6}% · sett {s.vSettPrec > 0 ? '+' : ''}{s.vSettPrec}%
                 </div>
-                <div className="banda-toggle">
-                  {STATI_FORZABILI.map(st => (
-                    <button
-                      key={st}
-                      className={cur === st ? 'active' : ''}
-                      onClick={() => setOverride(o => ({ ...o, [p]: st }))}
-                    >
-                      {st === 'AUTO' ? 'Auto' : st === 'INCLUDI' ? 'Favorisci' : st === 'ESCLUDI' ? 'Evita' : 'Off'}
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {STATI_FORZABILI.map(st => {
+                    const on = cur === st
+                    return (
+                      <button
+                        key={st}
+                        onClick={() => setOverride(o => ({ ...o, [p]: st }))}
+                        style={{
+                          flex: 1, fontSize: 10, padding: '4px 2px', borderRadius: 5,
+                          border: `1px solid ${on ? v.accent : v.borderHi}`,
+                          background: on ? v.accent : 'transparent',
+                          color: on ? v.bg : v.text, cursor: 'pointer', fontFamily: 'inherit'
+                        }}
+                      >
+                        {st === 'AUTO' ? 'Auto' : st === 'INCLUDI' ? 'Favorisci' : st === 'ESCLUDI' ? 'Evita' : 'Off'}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -82,131 +88,94 @@ export default function Genera({ draws }) {
         </div>
       </section>
 
-      <section className="home-section">
-        <h2>🎲 Sestine Consigliate</h2>
-        <p className="home-caption">
-          Generate dal motore statistico SONAR (regole validate su {draws.length} estrazioni reali),
-          escludendo qualunque combinazione già uscita — intera o per 5 numeri su 6.
-          Sono ordinate per <strong>punteggio totale</strong>: la somma di quanto ciascuno dei 6 numeri
-          è "atteso" nella propria posizione secondo le regole validate (più alto il punteggio di un
-          numero, più le regole lo indicano come probabile in quella posizione in questo momento).
-          È un gioco statistico, non una previsione: nessun sistema può garantire un'estrazione.
+      {/* Sestine consigliate */}
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Sestine consigliate</h2>
+        <p style={styles.caption}>
+          Generate dal motore validato su {draws.length} estrazioni reali, escludendo ogni combinazione
+          già uscita (intera o 5 su 6). Ordinate per punteggio totale. Gioco statistico, non previsione.
         </p>
 
-        {topSestine.length > 0 && (
+        {best && (
           <div
-            className="sestina-display featured"
             onClick={() => setSelectedIdx(0)}
-            style={{ cursor: 'pointer' }}
+            style={{ ...styles.card, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between', cursor: 'pointer', outline: selectedIdx === 0 ? `2px solid ${v.accent}` : 'none' }}
           >
-            {topSestine[0].numeri.map((num, i) => {
-              const d = topSestine[0].dettaglio[i]
+            {best.numeri.map((num, i) => {
+              const d = best.dettaglio[i]
               const band = RANK_BANDS_BY_POSITION[i]
-              const qualifier = d.rank <= band.p25
-                ? `meglio del solito (fascia tipica: ${band.p25}-${band.p75})`
-                : d.rank <= band.p75
-                  ? `nella norma (fascia tipica: ${band.p25}-${band.p75})`
-                  : `sotto la media tipica (${band.p25}-${band.p75})`
+              const q = d.rank <= band.p25 ? `top (${band.p25}-${band.p75})` : d.rank <= band.p75 ? `norma (${band.p25}-${band.p75})` : `sotto (${band.p25}-${band.p75})`
               return (
-                <div className="sestina-ball-wrap" key={i}>
-                  <span className="sestina-ball" style={{ background: POS_COLORS[i % 6] }}>
-                    {num}
-                  </span>
-                  <span className="sestina-rank">P{i + 1} · rank {d.rank}/{d.poolSize}</span>
-                  <span className="sestina-qualifier">{qualifier}</span>
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <span style={{ ...ballStyle(P[i % 6], 44, 17), margin: '0 auto' }}>{num}</span>
+                  <div style={{ fontSize: 10, color: v.muted, marginTop: 4, fontFamily: MONO }}>P{i + 1} · r{d.rank}/{d.poolSize}</div>
+                  <div style={{ fontSize: 9, color: v.dim }}>{q}</div>
                 </div>
               )
             })}
           </div>
         )}
-        <p className="sestina-featured-label">
-          ↑ La migliore (punteggio {topSestine[0]?.punteggioTotale.toFixed(2)})
+        <p style={{ fontSize: 11, color: v.muted, margin: '8px 0 4px' }}>
+          ↑ La migliore (punteggio {best?.punteggioTotale.toFixed(2)}) · rank medio {best?.rankMedio.toFixed(2)}
+        </p>
+        <p style={{ fontSize: 11, color: v.dim, margin: '0 0 12px', lineHeight: 1.5 }}>
+          Filtrate entro la fascia di rank medio reale ({HISTORICAL_AVG_RANK.p10}–{HISTORICAL_AVG_RANK.p90}):
+          scartiamo i profili troppo ottimistici, mai visti in 2.874 estrazioni.
         </p>
 
-        <p className="honesty-note">
-          ℹ️ Rank medio di questa proposta: <strong>{topSestine[0]?.rankMedio.toFixed(2)}</strong>.
-          Le sestine mostrate sono filtrate per restare dentro la fascia di rank medio
-          realmente osservata nelle 2.874 estrazioni reali (tra {HISTORICAL_AVG_RANK.p10} e{' '}
-          {HISTORICAL_AVG_RANK.p90}) — scartiamo automaticamente i profili troppo ottimistici,
-          mai verificatisi in passato. Restano comunque tra i più favorevoli statisticamente
-          possibili: è un gioco statistico, non una previsione.
-        </p>
-
-        <div className="sestine-list">
-          {topSestine.slice(1).map((s, i) => (
-            <div
-              className={`sestina-row ${selectedIdx === i + 1 ? 'selected' : ''}`}
-              key={i}
-              onClick={() => setSelectedIdx(i + 1)}
-              style={{ cursor: 'pointer' }}
-            >
-              <span className="sestina-row-rank">#{i + 2}</span>
-              <div className="sestina-row-balls">
-                {s.numeri.map((num, j) => (
-                  <span key={j} className="sestina-mini-ball" style={{ background: POS_COLORS[j % 6] }}>
-                    {num}
-                  </span>
-                ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {topSestine.slice(1).map((s, i) => {
+            const idx = i + 1
+            return (
+              <div
+                key={i}
+                onClick={() => setSelectedIdx(idx)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
+                  background: v.surface, border: `1px solid ${selectedIdx === idx ? v.accent : v.border}`
+                }}
+              >
+                <span style={{ fontFamily: MONO, color: v.muted, fontSize: 11, minWidth: 22 }}>#{idx + 1}</span>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', flex: 1 }}>
+                  {s.numeri.map((num, j) => (
+                    <span key={j} style={ballStyle(P[j % 6], 26, 11)}>{num}</span>
+                  ))}
+                </div>
+                <span style={{ fontFamily: MONO, color: v.accent, fontSize: 12 }}>{s.punteggioTotale.toFixed(2)}</span>
               </div>
-              <span className="sestina-row-score">{s.punteggioTotale.toFixed(2)}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
-        {selezionata && (
-          <>
-            <p className="sestina-chart-label">
-              📊 Rank per posizione della sestina selezionata (#{selectedIdx + 1}) — più in alto, più il
-              numero è "atteso" in quella posizione
-            </p>
-            <Sparkline
-              values={selezionata.dettaglio.map(d => d.rank)}
-              labels={POSITION_LABELS}
-              color="#00d4ff"
-              invertY={true}
-              yMin={1}
-            />
-          </>
+        {sel && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, color: v.muted, marginBottom: 4 }}>
+              Rank per posizione della sestina #{selectedIdx + 1} (più in alto = più atteso)
+            </div>
+            <div style={styles.card}>
+              <Sparkline values={sel.dettaglio.map(d => d.rank)} labels={POSITION_LABELS} color={v.accent} invertY yMin={1} />
+            </div>
+          </div>
         )}
       </section>
 
-      <section className="home-section">
-        <h2>📌 In breve</h2>
-        <div className="indicators-row">
-          <div className="indicator-card">
-            <span className="indicator-label">Estrazioni analizzate</span>
-            <span className="indicator-value">{draws.length}</span>
-          </div>
-          <div className="indicator-card">
-            <span className="indicator-label">Ultima estrazione</span>
-            <span className="indicator-value">{lastDraw ? lastDraw[0] : '-'}</span>
-          </div>
-          <div className="indicator-card">
-            <span className="indicator-label">Concorso</span>
-            <span className="indicator-value">#{lastDraw ? lastDraw[1] : '-'}</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="home-section">
-        <h3>📅 Ultime Estrazioni</h3>
-        <div className="draws-table">
-          {recentWithRank.map((item, idx) => (
-            <div key={idx} className="draw-row">
-              <span className="draw-date">{item.draw[0]}</span>
-              <span className="draw-number">#{item.draw[1]}</span>
-              <div className="draw-numbers">
+      {/* Ultime estrazioni */}
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Ultime estrazioni</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {recent.map((item, idx) => (
+            <div key={idx} style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: MONO, color: v.muted, fontSize: 12, minWidth: 82 }}>{item.draw[0]}</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
                 {item.draw[2].map((num, i) => (
-                  <div key={i} className="draw-num-wrap">
-                    <span className="draw-num-ball" style={{ background: POS_COLORS[i % 6] }}>
-                      {num}
-                    </span>
-                    <span className="draw-num-rank">#{item.ranks[i]}</span>
+                  <div key={i} style={{ textAlign: 'center' }}>
+                    <span style={ballStyle(P[i % 6], 30, 12)}>{num}</span>
+                    <div style={{ fontSize: 9, color: v.muted, fontFamily: MONO }}>#{item.ranks[i]}</div>
                   </div>
                 ))}
               </div>
-              <span className="draw-jolly">🎯 {item.draw[3]}</span>
-              <span className="draw-rank-medio">rank medio {item.rankMedio.toFixed(1)}</span>
+              <span style={{ fontFamily: MONO, color: v.gold, fontSize: 12 }}>J {item.draw[3]}</span>
+              <span style={{ fontSize: 11, color: v.dim, fontFamily: MONO }}>rm {item.rankMedio.toFixed(1)}</span>
             </div>
           ))}
         </div>

@@ -1,147 +1,104 @@
 import { useMemo, useState } from 'react'
-import { POS_COLORS } from '../utils/constants'
+import { v, P, styles, ballStyle, MONO } from '../utils/theme'
 import { actualRank, POSITION_LABELS } from '../engine/scoring'
 import { bandaDiRank } from '../engine/dominant-band'
 import Sparkline from './Sparkline'
-import './Home.css'
-import './sonar-ui.css'
 
-function parseDataIT(dataStr) {
-  const [g, m, a] = dataStr.split('/').map(Number)
-  return { mese: m, anno: a }
+function parseDataIT(s) { const [g, m, a] = s.split('/').map(Number); return { mese: m, anno: a } }
+
+function usciteMese(draws, num) {
+  const now = new Date(), m = now.getMonth() + 1, a = now.getFullYear()
+  return draws.filter(d => { const { mese, anno } = parseDataIT(d[0]); return mese === m && anno === a && d[2].includes(num) }).length
 }
-
-function usciteNelMeseCorrente(draws, num) {
-  const now = new Date()
-  const mese = now.getMonth() + 1
-  const anno = now.getFullYear()
-  return draws.filter(d => {
-    const { mese: m, anno: a } = parseDataIT(d[0])
-    return m === mese && a === anno && d[2].includes(num)
-  }).length
-}
-
-function distanzaInPosizione(draws, position, num) {
-  for (let i = draws.length - 1; i >= 0; i--) {
-    if (draws[i][2][position] === num) return draws.length - 1 - i
-  }
-  return null // mai uscito in questa posizione
+function distanza(draws, position, num) {
+  for (let i = draws.length - 1; i >= 0; i--) if (draws[i][2][position] === num) return draws.length - 1 - i
+  return null
 }
 
 export default function Componi({ draws }) {
   const [inputs, setInputs] = useState(['', '', '', '', '', ''])
-
-  const numeri = inputs.map(v => parseInt(v, 10))
-  const tuttiValidi = numeri.every(n => Number.isInteger(n) && n >= 1 && n <= 90)
-  const duplicati = tuttiValidi && new Set(numeri).size !== 6
-
-  // Ordiniamo crescente prima di valutarli: la posizione P1-P6 del motore
-  // rispecchia l'ordine crescente con cui le estrazioni reali sono registrate.
-  const numeriOrdinati = tuttiValidi && !duplicati ? [...numeri].sort((a, b) => a - b) : null
+  const numeri = inputs.map(x => parseInt(x, 10))
+  const validi = numeri.every(n => Number.isInteger(n) && n >= 1 && n <= 90)
+  const duplicati = validi && new Set(numeri).size !== 6
+  const ordinati = validi && !duplicati ? [...numeri].sort((a, b) => a - b) : null
 
   const dettaglio = useMemo(() => {
-    if (!numeriOrdinati) return null
-    const attesoPerNumero = (draws.length * 6) / 90
-    return numeriOrdinati.map((num, p) => {
+    if (!ordinati) return null
+    const atteso = (draws.length * 6) / 90
+    return ordinati.map((num, p) => {
       const { rank, poolSize } = actualRank(draws, p, num)
-      const banda = bandaDiRank(rank)
-      const uscite = usciteNelMeseCorrente(draws, num)
-      const distanza = distanzaInPosizione(draws, p, num)
-      return {
-        posizione: p,
-        num,
-        rank,
-        poolSize,
-        banda,
-        uscite,
-        atteso: attesoPerNumero,
-        sorpresa: uscite - attesoPerNumero,
-        distanza
-      }
+      return { p, num, rank, poolSize, banda: bandaDiRank(rank), uscite: usciteMese(draws, num), sorpresa: usciteMese(draws, num) - atteso, dist: distanza(draws, p, num) }
     })
-  }, [numeriOrdinati, draws])
+  }, [ordinati, draws])
 
-  const handleChange = (i, value) => {
-    const next = [...inputs]
-    next[i] = value.replace(/[^0-9]/g, '')
-    setInputs(next)
-  }
+  const change = (i, val) => { const nx = [...inputs]; nx[i] = val.replace(/[^0-9]/g, ''); setInputs(nx) }
 
   return (
-    <div className="home">
-      <section className="home-section">
-        <h2>✍️ Componi la tua sestina</h2>
-        <p className="home-caption">
-          Inserisci 6 numeri (1-90, tutti diversi). Vengono valutati in ordine crescente — lo stesso
-          ordine con cui il motore osserva le posizioni P1-P6 nelle estrazioni reali — con le stesse
-          regole validate usate per generare le sestine consigliate.
+    <div>
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Componi la tua sestina</h2>
+        <p style={styles.caption}>
+          Inserisci 6 numeri (1–90, tutti diversi). Vengono valutati in ordine crescente — lo stesso
+          ordine con cui il motore osserva P1–P6 — con le stesse regole validate.
         </p>
 
-        <div className="componi-form">
-          {inputs.map((v, i) => (
-            <div className="componi-input-wrap" key={i}>
-              <label>N. {i + 1}</label>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          {inputs.map((val, i) => (
+            <div key={i} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: v.muted, marginBottom: 4 }}>N. {i + 1}</div>
               <input
-                type="text"
-                inputMode="numeric"
-                maxLength={2}
-                value={v}
-                onChange={e => handleChange(i, e.target.value)}
+                type="text" inputMode="numeric" maxLength={2} value={val}
+                onChange={e => change(i, e.target.value)}
+                style={{ width: 52, padding: 8, textAlign: 'center', fontSize: 16, borderRadius: 8, border: `1px solid ${v.borderHi}`, background: v.card, color: v.text, fontFamily: MONO }}
               />
             </div>
           ))}
         </div>
 
-        {duplicati && <p className="componi-error">I 6 numeri devono essere tutti diversi tra loro.</p>}
+        {duplicati && <p style={{ color: v.hot, fontSize: 13 }}>I 6 numeri devono essere tutti diversi.</p>}
 
         {dettaglio && (
           <>
-            <p className="sestina-chart-label">
-              📊 Rank per posizione (ordine crescente: {numeriOrdinati.join(', ')})
-            </p>
-            <Sparkline
-              values={dettaglio.map(d => d.rank)}
-              labels={POSITION_LABELS}
-              color="#00d4ff"
-              invertY={true}
-              yMin={1}
-            />
+            <div style={{ fontSize: 12, color: v.muted, marginBottom: 4 }}>
+              Rank per posizione (ordine crescente: {ordinati.join(', ')})
+            </div>
+            <div style={styles.card}>
+              <Sparkline values={dettaglio.map(d => d.rank)} labels={POSITION_LABELS} color={v.accent} invertY yMin={1} />
+            </div>
 
-            <div className="sestina-display featured">
+            <div style={{ ...styles.card, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 12 }}>
               {dettaglio.map((d, i) => (
-                <div className="sestina-ball-wrap" key={i}>
-                  <span className="sestina-ball" style={{ background: POS_COLORS[i % 6] }}>{d.num}</span>
-                  <span className="sestina-rank">P{i + 1} · rank {d.rank}/{d.poolSize}</span>
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <span style={{ ...ballStyle(P[i % 6], 44, 17), margin: '0 auto' }}>{d.num}</span>
+                  <div style={{ fontSize: 10, color: v.muted, marginTop: 4, fontFamily: MONO }}>P{i + 1} · r{d.rank}/{d.poolSize}</div>
                 </div>
               ))}
             </div>
 
-            <table className="componi-stats-table">
-              <thead>
-                <tr>
-                  <th>Numero</th>
-                  <th>Posizione</th>
-                  <th>Rank</th>
-                  <th>Banda</th>
-                  <th>Uscite mese</th>
-                  <th>Osservato − atteso</th>
-                  <th>Distanza (in questa posizione)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dettaglio.map(d => (
-                  <tr key={d.posizione}>
-                    <td>{d.num}</td>
-                    <td>P{d.posizione + 1}</td>
-                    <td>{d.rank}/{d.poolSize}</td>
-                    <td>{d.banda}</td>
-                    <td>{d.uscite}</td>
-                    <td>{d.sorpresa >= 0 ? '+' : ''}{d.sorpresa.toFixed(1)}</td>
-                    <td>{d.distanza === null ? 'mai uscito qui' : `${d.distanza} estrazioni fa`}</td>
+            <div style={{ overflowX: 'auto', ...styles.card, padding: 0, marginTop: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: MONO }}>
+                <thead>
+                  <tr>
+                    {['Num', 'Pos', 'Rank', 'Banda', 'Mese', 'Oss−att', 'Distanza'].map(h => (
+                      <th key={h} style={{ padding: '8px 6px', color: v.muted, borderBottom: `1px solid ${v.border}` }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {dettaglio.map(d => (
+                    <tr key={d.p}>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.text }}>{d.num}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.muted }}>P{d.p + 1}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.text }}>{d.rank}/{d.poolSize}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.muted }}>{d.banda}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.text }}>{d.uscite}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: d.sorpresa >= 0 ? v.green : v.hot }}>{d.sorpresa >= 0 ? '+' : ''}{d.sorpresa.toFixed(1)}</td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', color: v.muted }}>{d.dist === null ? 'mai qui' : `${d.dist} fa`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </section>
