@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { v, P, styles, ballStyle, MONO } from '../utils/constants'
 import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
-import { actualRank, POSITION_LABELS } from '../engine/scoring'
-import { statoRegolaPerPosizione } from '../engine/dominant-band'
+import { actualRank, rankedCandidates, POSITION_LABELS } from '../engine/scoring'
+import { statoRegolaPerPosizione, applicaOverride } from '../engine/dominant-band'
 import PosizioniChart, { historicalSeries, stimaProssimaData } from './PosizioniChart'
 import { buildProjection } from './proiezione'
 
@@ -30,12 +30,26 @@ export default function Genera({ draws }) {
   const [selectedIdx, setSelectedIdx] = useState(0)
 
   const statiEffettivi = useMemo(
-    () => statiAuto.map((s, p) => (override[p] && override[p] !== 'AUTO' ? { ...s, stato: override[p] } : s)),
+    () => statiAuto.map((s, p) => {
+      const ov = override[p]
+      return ov && ov !== 'AUTO'
+        ? { ...s, stato: ov, manuale: true }   // forzato a mano → sostituzione locale del numero
+        : { ...s, manuale: false }              // Auto → sestina di base invariata
+    }),
     [statiAuto, override]
   )
+
+  // Base stabile: generata sempre con gli stati AUTO (non cambia coi toggle),
+  // così i toggle manuali agiscono solo come sostituzione locale, non rigenerano tutto.
+  const statiAutoNeutral = useMemo(() => statiAuto.map(s => ({ ...s, manuale: false })), [statiAuto])
+  const rankedPerPos = useMemo(() => [0, 1, 2, 3, 4, 5].map(p => rankedCandidates(draws, p)), [draws])
+  const topBase = useMemo(
+    () => generateTopSestine(draws, 10, { statiBandaDominante: statiAutoNeutral }),
+    [draws, statiAutoNeutral]
+  )
   const topSestine = useMemo(
-    () => generateTopSestine(draws, 10, { statiBandaDominante: statiEffettivi }),
-    [draws, statiEffettivi]
+    () => topBase.map(s => applicaOverride(rankedPerPos, s, statiEffettivi)),
+    [topBase, rankedPerPos, statiEffettivi]
   )
   const recent = useMemo(() => computeRecentWithRank(draws), [draws])
   const sel = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
@@ -65,8 +79,10 @@ export default function Genera({ draws }) {
         <h2 style={styles.h2}>Regola banda dominante</h2>
         <p style={styles.caption}>
           Per ogni posizione, la fascia di rank che negli ultimi 6 mesi (e nell'ultima settimana, con
-          lo stesso segno) ha prodotto più numeri del previsto. "Auto" usa il segno rilevato ora; puoi
-          forzare la posizione. Vantaggio piccolo — indicatore, non certezza.
+          lo stesso segno) ha prodotto più numeri del previsto. Forzando a mano una posizione,
+          "Favorisci" tiene solo i numeri dentro la banda, "Evita" li scarta, "Off" nessun vincolo:
+          il numero di quella posizione cambia di conseguenza. Tornando ad "Auto" ricompaiono i numeri
+          di prima. Vantaggio piccolo — indicatore, non certezza.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
           {POSITION_LABELS.map((label, p) => {
