@@ -1,112 +1,93 @@
-// ============================================================================
-// REGOLA "BANDA DOMINANTE" — attivazione automatica per posizione
-// ============================================================================
-// La banda dominante è la fascia di rank (griglia a 8 livelli) che ha prodotto
-// più numeri in un periodo. La regola, per ogni posizione, può:
-//   - INCLUDERE la dominante (spinge i pesi verso quella banda)
-//   - ESCLUDERE la dominante (spinge i pesi via da quella banda)
-//   - essere SPENTA (nessuna modifica ai pesi)
-//
-// Lo stato è deciso AUTOMATICAMENTE dal segno del "vantaggio storico" del
-// seguire la dominante, calcolato su DUE finestre — 6 mesi e settimana
-// precedente — che devono CONCORDARE:
-//   entrambi + → INCLUDI    entrambi − → ESCLUDI    discordi → SPENTA
-//
-// Nota di onestà (documentata in SONAR_Regole.md Rev.3): i vantaggi misurati
-// sono piccoli (2-3%) e non tutte le posizioni reggono lo split temporale.
-// La regola è un indicatore configurabile, non una previsione garantita.
-// ============================================================================
+// Regola "banda dominante": individua per ciascuna posizione la fascia di
+// rank (banda) che ha prodotto più numeri nel periodo recente, e decide se
+// vale la pena favorirla o evitarla nel generatore, in base al segno
+// CONCORDE dell'effetto su due finestre indipendenti (6 mesi + ultima
+// settimana). Validata sul rank del motore vero (2874 estrazioni, 15/08/2026):
+// P1 e P6 tendono a SEGUIRE la banda dominante, P5 tende a EVITARLA,
+// P2/P3/P4 non hanno mostrato un effetto stabile — per questo la regola è
+// calcolata posizione per posizione e può restare SPENTA. Vantaggio comunque
+// piccolo (2-3 punti percentuali): va trattato come indicatore, non certezza.
 
-const N_BANDE = 8;
-const BANDA_WIDTH = Math.ceil(48 / (N_BANDE - 1)); // 7: livelli 0..6 coprono rank 1..48, livello 7 = 49+
+import { actualRank } from './scoring'
 
-// A quale banda (0..7) appartiene un rank
+export const BANDA_WIDTH = 7
+export const N_BANDE = 8 // 7 bande larghe BANDA_WIDTH + una banda finale che raccoglie il resto
+
+const FINESTRA_MESI = 100    // ~6 mesi di estrazioni SuperEnalotto
+const FINESTRA_SETTIMANA = 15 // ~ultima settimana
+
+// Converte un rank (1-based) nella sua banda (0..N_BANDE-1).
 export function bandaDiRank(rank) {
-  if (rank >= 99) return N_BANDE - 1;
-  return Math.min(Math.floor((rank - 1) / BANDA_WIDTH), N_BANDE - 1);
+  return Math.min(N_BANDE - 1, Math.floor((rank - 1) / BANDA_WIDTH))
 }
 
-// Banda dominante in una finestra di rank-history [fromIdx, toIdx) per una posizione.
-// rankHist = array di { ranks: [6] } in ordine cronologico crescente.
-function bandaDominante(rankHist, position, fromIdx, toIdx) {
-  const conteggio = new Array(N_BANDE).fill(0);
-  for (let i = Math.max(0, fromIdx); i < toIdx; i++) {
-    conteggio[bandaDiRank(rankHist[i].ranks[position])]++;
-  }
-  let best = 0;
-  for (let b = 1; b < N_BANDE; b++) if (conteggio[b] > conteggio[best]) best = b;
-  return best;
-}
-
-// Peso globale di ogni banda per posizione (la frazione di volte in cui il
-// numero uscito cade in quella banda, su tutto lo storico). È il livello
-// "atteso": serve per capire se seguire la dominante dà vantaggio o no.
-function pesiGlobali(rankHist, position) {
-  const c = new Array(N_BANDE).fill(0);
-  for (const r of rankHist) c[bandaDiRank(r.ranks[position])]++;
-  return c.map((x) => x / rankHist.length);
-}
-
-// Vantaggio del "seguire la banda dominante domBanda" su un blocco [from,to):
-// (frazione reale con cui il numero uscito cade in domBanda) − (atteso).
-// >0 → seguirla conviene; <0 → conviene evitarla.
-function vantaggio(rankHist, position, domBanda, pesoGlob, fromIdx, toIdx) {
-  let cade = 0, casi = 0, atteso = 0;
-  for (let i = Math.max(0, fromIdx); i < toIdx; i++) {
-    casi++;
-    if (bandaDiRank(rankHist[i].ranks[position]) === domBanda) cade++;
-    atteso += pesoGlob[domBanda];
-  }
-  if (casi === 0) return 0;
-  return (cade - atteso) / casi;
-}
-
-// Numero di estrazioni che approssimano le due finestre
-const ESTR_6MESI = 100; // ~6 mesi (4 estrazioni/settimana × ~26 settimane)
-const ESTR_SETT = 4;    // una settimana
-
-// Stato della regola per ogni posizione, deciso dal segno concorde di
-// 6 mesi + settimana precedente. Ritorna, per ciascuna delle 6 posizioni:
-//   { stato: 'INCLUDI'|'ESCLUDI'|'SPENTA', banda: <0..7>, v6: <num>, vSettPrec: <num> }
-// dove `banda` è la banda dominante recente (dei 6 mesi), quella su cui agire.
-export function statoRegolaPerPosizione(rankHist) {
-  const n = rankHist.length;
-  const stati = [];
-  for (let p = 0; p < 6; p++) {
-    // dati insufficienti → spenta
-    if (n < ESTR_6MESI + ESTR_SETT) {
-      stati.push({ stato: 'SPENTA', banda: null, v6: 0, vSettPrec: 0 });
-      continue;
+// Rank reali walk-forward (mai guardare avanti) delle ultime `n` estrazioni,
+// per ciascuna delle 6 posizioni.
+function walkForwardRanks(draws, n) {
+  const total = draws.length
+  const start = Math.max(1, total - n)
+  const out = [[], [], [], [], [], []]
+  for (let t = start; t < total; t++) {
+    const history = draws.slice(0, t)
+    for (let p = 0; p < 6; p++) {
+      out[p].push(actualRank(history, p, draws[t][2][p]).rank)
     }
-    const pesoGlob = pesiGlobali(rankHist, p);
-    // banda dominante calcolata sui 6 mesi (è quella che la regola usa)
-    const domBanda = bandaDominante(rankHist, p, n - ESTR_6MESI, n);
-    // segno del vantaggio sui 6 mesi e sulla settimana precedente (le ultime
-    // ESTR_SETT estrazioni sono la "settimana in corso"; quella prima è la
-    // "settimana precedente": [n-2*SETT, n-SETT))
-    const v6 = vantaggio(rankHist, p, domBanda, pesoGlob, n - ESTR_6MESI, n);
-    const vSettPrec = vantaggio(rankHist, p, domBanda, pesoGlob, n - 2 * ESTR_SETT, n - ESTR_SETT);
-    const s6 = Math.sign(v6);
-    const sPrec = Math.sign(vSettPrec);
-
-    let stato;
-    if (s6 !== 0 && s6 === sPrec) stato = s6 > 0 ? 'INCLUDI' : 'ESCLUDI';
-    else stato = 'SPENTA';
-
-    stati.push({ stato, banda: domBanda, v6, vSettPrec });
   }
-  return stati;
+  return out
 }
 
-// Fattore moltiplicativo da applicare al peso di un candidato, data la sua
-// banda di rank e lo stato della regola per la sua posizione.
-//   INCLUDI: i numeri nella banda dominante pesano di più (×BOOST)
-//   ESCLUDI: i numeri nella banda dominante pesano di meno (×1/BOOST)
-//   SPENTA:  nessuna modifica (×1)
-const BOOST = 2.0;
-export function fattorePeso(statoPos, rankCandidato) {
-  if (!statoPos || statoPos.stato === 'SPENTA' || statoPos.banda == null) return 1;
-  const inBanda = bandaDiRank(rankCandidato) === statoPos.banda;
-  if (!inBanda) return 1;
-  return statoPos.stato === 'INCLUDI' ? BOOST : 1 / BOOST;
+function bandaDominante(ranks) {
+  const conteggio = new Array(N_BANDE).fill(0)
+  for (const r of ranks) conteggio[bandaDiRank(r)]++
+  let best = 0
+  for (let b = 1; b < N_BANDE; b++) if (conteggio[b] > conteggio[best]) best = b
+  return best
+}
+
+// Scostamento (in punti percentuali) tra il tasso osservato di caduta nella
+// banda indicata e il tasso atteso per caso (100/N_BANDE). Positivo = la
+// banda attira più numeri del previsto; negativo = ne attira meno.
+function scostamentoBanda(ranks, banda) {
+  if (ranks.length === 0) return 0
+  const nella = ranks.filter(r => bandaDiRank(r) === banda).length
+  return (nella / ranks.length) * 100 - 100 / N_BANDE
+}
+
+// Per ciascuna delle 6 posizioni: {stato, banda, v6, vSettPrec}
+//  - banda: banda dominante nella finestra dei 6 mesi
+//  - v6 / vSettPrec: scostamento (punti %) nella finestra 6 mesi / ultima settimana
+//  - stato: 'INCLUDI' se entrambi gli scostamenti sono positivi (segue la banda),
+//           'ESCLUDI' se entrambi negativi (la evita),
+//           'SPENTA' se discordi — la regola non si attiva
+export function statoRegolaPerPosizione(draws) {
+  const ranks6m = walkForwardRanks(draws, FINESTRA_MESI)
+  const ranksSett = walkForwardRanks(draws, FINESTRA_SETTIMANA)
+
+  return ranks6m.map((serie6m, p) => {
+    const banda = bandaDominante(serie6m)
+    const v6 = scostamentoBanda(serie6m, banda)
+    const vSettPrec = scostamentoBanda(ranksSett[p], banda)
+
+    let stato = 'SPENTA'
+    if (v6 > 0 && vSettPrec > 0) stato = 'INCLUDI'
+    else if (v6 < 0 && vSettPrec < 0) stato = 'ESCLUDI'
+
+    return {
+      stato,
+      banda,
+      v6: Math.round(v6 * 10) / 10,
+      vSettPrec: Math.round(vSettPrec * 10) / 10
+    }
+  })
+}
+
+// Fattore moltiplicativo da applicare al peso di campionamento di un
+// candidato nel generatore, in base allo stato della regola per la sua
+// posizione (statoPos, elemento del risultato di statoRegolaPerPosizione,
+// eventualmente forzato manualmente dall'utente) e alla banda del suo rank.
+export function fattorePeso(statoPos, rank) {
+  if (!statoPos || statoPos.stato === 'SPENTA') return 1
+  const inBanda = bandaDiRank(rank) === statoPos.banda
+  if (!inBanda) return 1
+  return statoPos.stato === 'INCLUDI' ? 2 : statoPos.stato === 'ESCLUDI' ? 0.5 : 1
 }

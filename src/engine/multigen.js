@@ -160,26 +160,27 @@ function solveDP(perPosition) {
   return numeri
 }
 
+// opts.statiBandaDominante: array di 6 elementi (uno per posizione), ciascuno
+// nel formato restituito da statoRegolaPerPosizione (o forzato manualmente
+// dall'utente su INCLUDI/ESCLUDI/SPENTA) — vedi src/engine/dominant-band.js.
+// Senza opts (o senza statiBandaDominante), il comportamento è IDENTICO a
+// prima: retro-compatibile.
 export function generateTopSestine(draws, howMany = RESULTS_WANTED, opts = {}) {
+  const statiBanda = opts.statiBandaDominante || null
   const fullRanking = [] // classifica COMPLETA per posizione, per calcolare il rank vero da mostrare
   const perPosition = [] // [numero, pesoEmpirico] ordinato per NUMERO (serve alla DP)
   const infoPerNumero = [] // Map numero -> {score, rank} per ricostruire il dettaglio dopo
-
-  // REGOLA BANDA DOMINANTE (opzionale): se viene passato lo stato per posizione
-  // (opts.statiBandaDominante, da statoRegolaPerPosizione), il peso di ogni
-  // candidato viene moltiplicato per fattorePeso() — spinge verso o via dalla
-  // banda dominante secondo lo stato INCLUDI/ESCLUDI/SPENTA di quella posizione.
-  const stati = opts.statiBandaDominante || null
 
   for (let p = 0; p < 6; p++) {
     const full = rankedCandidates(draws, p)
     fullRanking.push(full)
     const info = new Map()
+    const statoPos = statiBanda ? statiBanda[p] : null
     const pool = full.slice(0, POOL_WIDTH_BY_POSITION[p]).map(([num, score], idx) => {
       const rank = idx + 1
       info.set(num, { score, rank })
-      const fattore = stati ? fattorePeso(stati[p], rank) : 1
-      return [num, rankProbabilityWeight(p, rank) * fattore]
+      const peso = rankProbabilityWeight(p, rank) * fattorePeso(statoPos, rank)
+      return [num, peso]
     })
     pool.sort((a, b) => a[0] - b[0]) // ordina per NUMERO crescente, richiesto dalla DP
     perPosition.push(pool)
