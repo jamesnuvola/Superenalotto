@@ -91,3 +91,55 @@ export function fattorePeso(statoPos, rank) {
   if (!inBanda) return 1
   return statoPos.stato === 'INCLUDI' ? 2 : statoPos.stato === 'ESCLUDI' ? 0.5 : 1
 }
+
+// Applica gli override MANUALI a una singola sestina già generata, cambiando
+// SOLO i numeri delle posizioni forzate e lasciando intatte le altre. Per la
+// posizione forzata definisce una BANDA BERSAGLIO:
+//   "Favorisci" (INCLUDI) → la banda dominante,
+//   "Evita" (ESCLUDI)     → la banda SPECULARE, N_BANDE-1-dominante
+//                           (riflessa: 0↔7, 1↔6, 2↔5, 3↔4),
+// e sceglie, tra i candidati ammessi dal vincolo d'ordine (strettamente tra i
+// due vicini, non già usati nelle altre posizioni), quello col rank PIÙ VICINO
+// al centro della banda bersaglio. Un candidato valido esiste sempre (almeno il
+// numero attuale, che sta tra i vicini), quindi la posizione ha sempre una
+// risposta definita: quando la banda bersaglio non è raggiungibile dentro il
+// vincolo (es. P1/Evita, banda profonda ma il numero deve restare < P2),
+// "più vicino" diventa il rank più estremo disponibile in quella direzione.
+// Deterministico: senza override manuali la sestina resta quella di base.
+export function applicaOverride(rankedPerPosizione, sestina, statiEffettivi) {
+  const numeri = [...sestina.numeri]
+  const dettaglio = sestina.dettaglio.map(d => ({ ...d }))
+
+  for (let p = 0; p < 6; p++) {
+    const st = statiEffettivi[p]
+    if (!st || !st.manuale || st.stato === 'SPENTA') continue
+    const bandaTarget = st.stato === 'INCLUDI' ? st.banda : (N_BANDE - 1 - st.banda)
+    const rankTarget = bandaTarget * BANDA_WIDTH + Math.ceil(BANDA_WIDTH / 2) // centro della banda bersaglio
+    const low = p > 0 ? numeri[p - 1] : 0
+    const high = p < 5 ? numeri[p + 1] : 91
+    const full = rankedPerPosizione[p] // [ [num, score], ... ] ordinati per rank
+
+    let best = null // { num, score, rank, dist }
+    for (let idx = 0; idx < full.length; idx++) {
+      const [num, score] = full[idx]
+      if (num <= low || num >= high) continue // rispetta l'ordine crescente
+      let usataAltrove = false
+      for (let q = 0; q < 6; q++) { if (q !== p && numeri[q] === num) { usataAltrove = true; break } }
+      if (usataAltrove) continue
+      const rank = idx + 1
+      const dist = Math.abs(rank - rankTarget)
+      if (!best || dist < best.dist || (dist === best.dist && rank < best.rank)) {
+        best = { num, score, rank, dist }
+      }
+    }
+
+    if (best) {
+      numeri[p] = best.num
+      dettaglio[p] = { ...dettaglio[p], numero: best.num, punteggio: best.score, rank: best.rank, poolSize: full.length }
+    }
+  }
+
+  const punteggioTotale = dettaglio.reduce((s, d) => s + d.punteggio, 0)
+  const rankMedio = dettaglio.reduce((s, d) => s + d.rank, 0) / dettaglio.length
+  return { ...sestina, numeri, dettaglio, punteggioTotale, rankMedio }
+}
