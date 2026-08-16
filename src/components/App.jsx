@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { v, FONT, MONO } from '../utils/theme'
+import { v, FONT, MONO } from '../utils/constants'
 import SEED_DRAWS from '../data/draws'
 import Genera from './Genera'
 import Andamento from './Andamento'
@@ -34,7 +34,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: v.bg, color: v.text, fontFamily: FONT, overflowX: 'hidden', width: '100%' }}>
+    <div style={{ minHeight: '100vh', background: v.bg, color: v.text, fontFamily: FONT, width: '100%' }}>
       <header style={{ borderBottom: `1px solid ${v.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 0' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
