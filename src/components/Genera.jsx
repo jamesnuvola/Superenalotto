@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { v, P, styles, ballStyle, MONO } from '../utils/theme'
+import { v, P, styles, ballStyle, MONO } from '../utils/constants'
 import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
 import { actualRank, POSITION_LABELS } from '../engine/scoring'
 import { statoRegolaPerPosizione } from '../engine/dominant-band'
-import Sparkline from './Sparkline'
+import PosizioniChart, { historicalSeries, stimaProssimaData } from './PosizioniChart'
+import { buildProjection } from './proiezione'
 
 const RECENT_LOOKBACK = 10
 const STATI_FORZABILI = ['AUTO', 'INCLUDI', 'ESCLUDI', 'SPENTA']
@@ -40,8 +41,25 @@ export default function Genera({ draws }) {
   const sel = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
   const best = topSestine[0]
 
+  // Grafico proiezione: 15 estrazioni reali + la sestina selezionata nella colonna futura
+  const hs = useMemo(() => historicalSeries(draws, 15), [draws])
+  const futureLabel = useMemo(() => stimaProssimaData(draws), [draws])
+  const proj = useMemo(() => {
+    const nums = sel ? sel.numeri : new Array(6).fill(null)
+    const ranks = sel ? sel.dettaglio.map(d => d.rank) : new Array(6).fill(null)
+    return buildProjection(hs, futureLabel, nums, ranks)
+  }, [hs, futureLabel, sel])
+
   return (
     <div>
+      {/* Grafico proiezione, compatto e bloccato in cima */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: v.bg, paddingBottom: 8, marginBottom: 14, borderBottom: `1px solid ${v.border}` }}>
+        <div style={{ fontSize: 12, color: v.muted, margin: '0 0 6px' }}>
+          Proiezione sestina #{selectedIdx + 1} alla prossima estrazione ({futureLabel}) — seleziona una sestina sotto per aggiornarla
+        </div>
+        <PosizioniChart columns={proj.columns} lines={proj.lines} jolly={proj.jolly} height={200} legend={false} />
+      </div>
+
       {/* Regola banda dominante */}
       <section style={styles.section}>
         <h2 style={styles.h2}>Regola banda dominante</h2>
@@ -147,16 +165,6 @@ export default function Genera({ draws }) {
           })}
         </div>
 
-        {sel && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 12, color: v.muted, marginBottom: 4 }}>
-              Rank per posizione della sestina #{selectedIdx + 1} (più in alto = più atteso)
-            </div>
-            <div style={styles.card}>
-              <Sparkline values={sel.dettaglio.map(d => d.rank)} labels={POSITION_LABELS} color={v.accent} invertY yMin={1} />
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Ultime estrazioni */}

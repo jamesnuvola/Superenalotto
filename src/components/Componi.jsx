@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { v, P, styles, ballStyle, MONO } from '../utils/constants'
-import { actualRank, POSITION_LABELS } from '../engine/scoring'
+import { actualRank } from '../engine/scoring'
 import { bandaDiRank } from '../engine/dominant-band'
-import PosizioniChart from './PosizioniChart'
+import PosizioniChart, { historicalSeries, stimaProssimaData } from './PosizioniChart'
+import { buildProjection } from './proiezione'
 
 function parseDataIT(s) { const [g, m, a] = s.split('/').map(Number); return { mese: m, anno: a } }
-
 function usciteMese(draws, num) {
   const now = new Date(), m = now.getMonth() + 1, a = now.getFullYear()
   return draws.filter(d => { const { mese, anno } = parseDataIT(d[0]); return mese === m && anno === a && d[2].includes(num) }).length
@@ -17,27 +17,25 @@ function distanza(draws, position, num) {
 
 export default function Componi({ draws }) {
   const [inputs, setInputs] = useState(['', '', '', '', '', ''])
+  const hs = useMemo(() => historicalSeries(draws, 15), [draws])
+  const futureLabel = useMemo(() => stimaProssimaData(draws), [draws])
 
   const numeri = inputs.map(x => parseInt(x, 10))
   const validi = numeri.every(n => Number.isInteger(n) && n >= 1 && n <= 90)
   const duplicati = validi && new Set(numeri).size !== 6
 
-  // Numeri validi inseriti finora (anche parziali), ordinati crescenti:
-  // ogni numero occupa la prossima posizione P1..Pk. Così il grafico si
-  // "compila" a ogni numero digitato, coerente col motore (posizione = ordine crescente).
+  // Numeri validi finora (anche parziali), ordinati crescenti → posizione P1..Pk.
   const parziale = useMemo(() => {
     const vals = numeri.filter(n => Number.isInteger(n) && n >= 1 && n <= 90).sort((a, b) => a - b)
     const values = new Array(6).fill(null)
     const ranks = new Array(6).fill(null)
-    vals.slice(0, 6).forEach((num, p) => {
-      values[p] = num
-      ranks[p] = actualRank(draws, p, num).rank
-    })
+    vals.slice(0, 6).forEach((num, p) => { values[p] = num; ranks[p] = actualRank(draws, p, num).rank })
     return { values, ranks }
   }, [numeri.join(','), draws])
 
-  const ordinati = validi && !duplicati ? [...numeri].sort((a, b) => a - b) : null
+  const proj = useMemo(() => buildProjection(hs, futureLabel, parziale.values, parziale.ranks), [hs, futureLabel, parziale])
 
+  const ordinati = validi && !duplicati ? [...numeri].sort((a, b) => a - b) : null
   const dettaglio = useMemo(() => {
     if (!ordinati) return null
     const atteso = (draws.length * 6) / 90
@@ -49,19 +47,20 @@ export default function Componi({ draws }) {
   }, [ordinati, draws])
 
   const change = (i, val) => { const nx = [...inputs]; nx[i] = val.replace(/[^0-9]/g, ''); setInputs(nx) }
-  const almenoUno = parziale.values.some(x => x != null)
 
   return (
     <div>
       <section style={styles.section}>
         <h2 style={styles.h2}>Componi la tua sestina</h2>
         <p style={styles.caption}>
-          Inserisci 6 numeri (1–90, tutti diversi). Vengono valutati in ordine crescente — lo stesso
-          ordine con cui il motore osserva P1→P6. Il grafico aggiunge un punto a ogni numero, col
-          valore sopra e il rank sotto.
+          Inserisci 6 numeri (1–90, tutti diversi). Il grafico mostra le ultime 15 estrazioni e proietta
+          i tuoi numeri per posizione nella colonna futura ({futureLabel}): vedi come si sposterebbero
+          le linee alla prossima estrazione. Ogni numero digitato prolunga la sua linea.
         </p>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <PosizioniChart columns={proj.columns} lines={proj.lines} jolly={proj.jolly} />
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '14px 0' }}>
           {inputs.map((val, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: v.muted, marginBottom: 4 }}>N. {i + 1}</div>
@@ -76,17 +75,9 @@ export default function Componi({ draws }) {
 
         {duplicati && <p style={{ color: v.hot, fontSize: 13 }}>I 6 numeri devono essere tutti diversi.</p>}
 
-        {almenoUno && (
-          <PosizioniChart
-            xLabels={POSITION_LABELS}
-            lines={[{ label: 'Sestina', color: v.accent, values: parziale.values, ranks: parziale.ranks }]}
-            legend={false}
-          />
-        )}
-
         {dettaglio && (
           <>
-            <div style={{ ...styles.card, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 12 }}>
+            <div style={{ ...styles.card, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between' }}>
               {dettaglio.map((d, i) => (
                 <div key={i} style={{ textAlign: 'center' }}>
                   <span style={{ ...ballStyle(P[i % 6], 44, 17), margin: '0 auto' }}>{d.num}</span>
