@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
-import { COLORS, storage } from '../utils/constants'
+import { COLORS } from '../utils/constants'
 import SEED_DRAWS from '../data/draws'
 import Header from './Header'
-import Home from './Home'
-import Statistics from './Statistics'
-import WinForLife from './WinForLife'
+import Genera from './Genera'
+import Andamento from './Andamento'
+import Storico from './Storico'
+import Griglia from './Griglia'
+import Componi from './Componi'
 import './App.css'
 
 export default function App() {
   const [draws, setDraws] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState('genera')
 
   useEffect(() => {
     setDraws(SEED_DRAWS)
@@ -30,11 +32,11 @@ export default function App() {
       <Header draws={draws} activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="app-main">
-        {activeTab === 'dashboard' && <Home draws={draws} />}
-        {activeTab === 'wlf' && <WinForLife />}
-        {activeTab === 'search' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>🔍 Ricerca - Coming Soon</div>}
-        {activeTab === 'stats' && <Statistics draws={draws} />}
-        {activeTab === 'settings' && <div style={{ padding: '40px', textAlign: 'center', color: COLORS.muted }}>⚙️ Impostazioni - Coming Soon</div>}
+        {activeTab === 'genera' && <Genera draws={draws} />}
+        {activeTab === 'andamento' && <Andamento draws={draws} />}
+        {activeTab === 'storico' && <Storico draws={draws} />}
+        {activeTab === 'griglia' && <Griglia draws={draws} />}
+        {activeTab === 'componi' && <Componi draws={draws} />}
       </main>
 
       <footer className="app-footer">

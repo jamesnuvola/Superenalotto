@@ -39,35 +39,35 @@ export default function Header({ draws, activeTab, setActiveTab }) {
       </div>
       
       <nav className="tab-nav">
-        <button 
-          className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
+        <button
+          className={`tab-btn ${activeTab === 'genera' ? 'active' : ''}`}
+          onClick={() => setActiveTab('genera')}
         >
-          📊 Dashboard
+          🎲 Genera
         </button>
-        <button 
-          className={`tab-btn ${activeTab === 'wlf' ? 'active' : ''}`}
-          onClick={() => setActiveTab('wlf')}
+        <button
+          className={`tab-btn ${activeTab === 'andamento' ? 'active' : ''}`}
+          onClick={() => setActiveTab('andamento')}
         >
-          🍀 Win for Life
+          📈 Andamento
         </button>
-        <button 
-          className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`}
-          onClick={() => setActiveTab('search')}
+        <button
+          className={`tab-btn ${activeTab === 'storico' ? 'active' : ''}`}
+          onClick={() => setActiveTab('storico')}
         >
-          🔍 Ricerca
+          📅 Storico
         </button>
-        <button 
-          className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
-          onClick={() => setActiveTab('stats')}
+        <button
+          className={`tab-btn ${activeTab === 'griglia' ? 'active' : ''}`}
+          onClick={() => setActiveTab('griglia')}
         >
-          📈 Statistiche
+          🔢 Griglia
         </button>
-        <button 
-          className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
+        <button
+          className={`tab-btn ${activeTab === 'componi' ? 'active' : ''}`}
+          onClick={() => setActiveTab('componi')}
         >
-          ⚙️ Impostazioni
+          ✍️ Componi
         </button>
       </nav>
     </header>
