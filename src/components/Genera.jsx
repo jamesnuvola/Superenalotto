@@ -29,27 +29,24 @@ export default function Genera({ draws }) {
   const [override, setOverride] = useState({})
   const [selectedIdx, setSelectedIdx] = useState(0)
 
-  const statiEffettivi = useMemo(
+  // Stato RISOLTO per posizione: se hai forzato a mano usa quello, altrimenti
+  // la direzione rilevata dai dati (Auto). È lo stesso oggetto per tutti gli
+  // stati — Auto non è un caso a parte, sceglie solo quale dei tre applicare.
+  const statiRisolti = useMemo(
     () => statiAuto.map((s, p) => {
       const ov = override[p]
-      return ov && ov !== 'AUTO'
-        ? { ...s, stato: ov, manuale: true }   // forzato a mano → sostituzione locale del numero
-        : { ...s, manuale: false }              // Auto → sestina di base invariata
+      return ov && ov !== 'AUTO' ? { ...s, stato: ov } : s
     }),
     [statiAuto, override]
   )
 
-  // Base stabile: generata sempre con gli stati AUTO (non cambia coi toggle),
-  // così i toggle manuali agiscono solo come sostituzione locale, non rigenerano tutto.
-  const statiAutoNeutral = useMemo(() => statiAuto.map(s => ({ ...s, manuale: false })), [statiAuto])
+  // Base NEUTRA: solo punteggio, nessun effetto banda. Da qui applicaOverride
+  // sostituisce i numeri secondo lo stato risolto (Spenta = resta il neutro).
   const rankedPerPos = useMemo(() => [0, 1, 2, 3, 4, 5].map(p => rankedCandidates(draws, p)), [draws])
-  const topBase = useMemo(
-    () => generateTopSestine(draws, 10, { statiBandaDominante: statiAutoNeutral }),
-    [draws, statiAutoNeutral]
-  )
+  const topBase = useMemo(() => generateTopSestine(draws, 10), [draws])
   const topSestine = useMemo(
-    () => topBase.map(s => applicaOverride(rankedPerPos, s, statiEffettivi)),
-    [topBase, rankedPerPos, statiEffettivi]
+    () => topBase.map(s => applicaOverride(rankedPerPos, s, statiRisolti)),
+    [topBase, rankedPerPos, statiRisolti]
   )
   const recent = useMemo(() => computeRecentWithRank(draws), [draws])
   const sel = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
@@ -78,21 +75,24 @@ export default function Genera({ draws }) {
       <section style={styles.section}>
         <h2 style={styles.h2}>Regola banda dominante</h2>
         <p style={styles.caption}>
-          Per ogni posizione, la fascia di rank che negli ultimi 6 mesi (e nell'ultima settimana, con
-          lo stesso segno) ha prodotto più numeri del previsto. Forzando a mano una posizione,
-          "Favorisci" tiene solo i numeri dentro la banda, "Evita" li scarta, "Off" nessun vincolo:
-          il numero di quella posizione cambia di conseguenza. Tornando ad "Auto" ricompaiono i numeri
-          di prima. Vantaggio piccolo — indicatore, non certezza.
+          Per ogni posizione, la fascia di rank che ultimamente ha prodotto più numeri del previsto.
+          Ci sono tre proposte per posizione: "Off" = numero neutro (solo punteggio, nessuna banda),
+          "Favorisci" = verso la banda dominante, "Evita" = verso la banda speculare (riflessa: 0↔7,
+          1↔6, 2↔5, 3↔4). "Auto" non è una quarta proposta: applica Favorisci o Evita secondo i dati,
+          o resta neutro se il segnale è nullo. Cambia solo il numero di quella posizione. Indicatore, non certezza.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
           {POSITION_LABELS.map((label, p) => {
-            const s = statiEffettivi[p]
+            const s = statiRisolti[p]
             const cur = override[p] || 'AUTO'
+            const etichettaStato = s.stato === 'INCLUDI' ? 'dominante' : s.stato === 'ESCLUDI' ? 'speculare' : 'neutro'
             return (
               <div key={label} style={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <strong style={{ fontFamily: MONO, color: v.text }}>{label}</strong>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: statoColor[s.stato] }}>{s.stato}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: statoColor[s.stato] }}>
+                    {cur === 'AUTO' ? `Auto → ${etichettaStato}` : etichettaStato}
+                  </span>
                 </div>
                 <div style={{ fontSize: 11, color: v.muted, marginBottom: 8 }}>
                   banda {s.banda} · 6m {s.v6 > 0 ? '+' : ''}{s.v6}% · sett {s.vSettPrec > 0 ? '+' : ''}{s.vSettPrec}%
