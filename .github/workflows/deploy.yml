@@ -10,30 +10,27 @@ permissions:
   pages: write
   id-token: write
 
+# false: un secondo deploy NON annulla quello in corso (prima 'true' poteva
+# uccidere il deploy giusto lasciando pubblicata una build vecchia).
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
     - name: Use Node.js 18.x
       uses: actions/setup-node@v4
       with:
         node-version: 18.x
-
     - name: Install dependencies
       run: npm install
-
     - name: Build project
       run: npm run build
-
     - name: Setup Pages
       uses: actions/configure-pages@v5
-
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:

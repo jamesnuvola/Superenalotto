@@ -1,45 +1,74 @@
-name: Aggiorna estrazioni SuperEnalotto
+name: Aggiorna estrazioni e pubblica
+
+# Un unico workflow: aggiorna i dati, li committa, POI builda e pubblica il sito
+# nello stesso run. Niente handoff a un secondo workflow (era quello a inceppare
+# il deploy). Ricostruisce a ogni run, così se un deploy si perde si auto-ripara
+# il giorno dopo. Il build usa il working tree appena aggiornato, quindi il sito
+# riflette sempre l'ultimo draws.js — anche se il push fallisse.
 
 on:
   schedule:
-    # Ogni giorno alle 21:30 CEST (19:30 UTC) - dopo le estrazioni serali
-    - cron: '30 19 * * *'
+    # 22:30 CEST (20:30 UTC) - più tardi, per dare tempo alla fonte di pubblicare
+    - cron: '30 20 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: write
+  contents: write   # per committare i dati aggiornati
+  pages: write      # per pubblicare su GitHub Pages
+  id-token: write   # richiesto da deploy-pages
+
+# Non annullare un deploy in corso: vogliamo che finisca, non che venga ucciso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  update-draws:
+  aggiorna-e-build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js 18.x
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18.x
+      - name: Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
 
-    - name: Esegui script di aggiornamento
-      run: node scripts/update-draws.mjs
+      - name: Aggiorna estrazioni dalla fonte
+        run: node scripts/update-draws.mjs
 
-    - name: Commit e push se ci sono modifiche
-      id: commit
-      run: |
-        git config user.name "SONAR Bot"
-        git config user.email "actions@github.com"
-        git add src/data/draws.js
-        if git diff --staged --quiet; then
-          echo "changed=false" >> "$GITHUB_OUTPUT"
-        else
-          git commit -m "chore: aggiornamento automatico estrazioni $(date -u +'%Y-%m-%d')"
-          git push
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-        fi
+      - name: Commit e push se ci sono nuove estrazioni
+        run: |
+          git config user.name "SONAR Bot"
+          git config user.email "actions@github.com"
+          git add src/data/draws.js src/data/rank-history.json
+          if git diff --staged --quiet; then
+            echo "Nessuna nuova estrazione da committare."
+          else
+            git commit -m "chore: aggiornamento estrazioni $(date -u +'%Y-%m-%d')"
+            git push
+          fi
 
-    - name: Avvia il deploy del sito (il push del bot non lo attiva da solo)
-      if: steps.commit.outputs.changed == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh workflow run deploy.yml --ref main
+      - name: Installa dipendenze
+        run: npm install
+
+      - name: Build (usa il draws.js appena aggiornato)
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Carica artefatto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: aggiorna-e-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
