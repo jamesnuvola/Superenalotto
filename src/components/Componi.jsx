@@ -38,11 +38,15 @@ export default function Componi({ draws }) {
   const ordinati = validi && !duplicati ? [...numeri].sort((a, b) => a - b) : null
   const dettaglio = useMemo(() => {
     if (!ordinati) return null
-    const atteso = (draws.length * 6) / 90
+    // atteso COERENTE con la finestra di "uscite" (mese corrente): quante volte
+    // in media un numero dovrebbe uscire nelle estrazioni di questo mese.
+    const now = new Date(), m = now.getMonth() + 1, a = now.getFullYear()
+    const nDrawsMese = draws.filter(d => { const x = parseDataIT(d[0]); return x.mese === m && x.anno === a }).length
+    const attesoMese = (nDrawsMese * 6) / 90
     return ordinati.map((num, p) => {
       const { rank, poolSize } = actualRank(draws, p, num)
       const u = usciteMese(draws, num)
-      return { p, num, rank, poolSize, banda: bandaDiRank(rank), uscite: u, sorpresa: u - atteso, dist: distanza(draws, p, num) }
+      return { p, num, rank, poolSize, banda: bandaDiRank(rank), uscite: u, atteso: attesoMese, sorpresa: u - attesoMese, dist: distanza(draws, p, num) }
     })
   }, [ordinati, draws])
 
