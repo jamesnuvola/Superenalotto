@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { v, P, styles, ballStyle, MONO } from '../utils/constants'
-import { generateTopSestine, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
+import { generateTopSestine, decidiFiltroEstremi, HISTORICAL_AVG_RANK, RANK_BANDS_BY_POSITION } from '../engine/multigen'
 import { actualRank, rankedCandidates, POSITION_LABELS } from '../engine/scoring'
 import { statoRegolaPerPosizione, applicaOverride } from '../engine/dominant-band'
 import PosizioniChart, { historicalSeries, stimaProssimaData } from './PosizioniChart'
@@ -24,10 +24,35 @@ function computeRecentWithRank(draws) {
 
 const statoColor = { INCLUDI: v.green, ESCLUDI: v.hot, SPENTA: v.muted }
 
+// valori tipici (media) delle posizioni estreme, per decidere il "lato più estremo"
+const TIPICO_P1 = 13.4, TIPICO_P6 = 78.3
+
+function StepEstremo({ label, value, set, min, max, color }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{ fontSize: 11, color, fontFamily: MONO, marginBottom: 4 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <button onClick={() => set(Math.max(min, value - 1))} style={stepBtn(color)}>−</button>
+        <span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 700, color, minWidth: 32 }}>{value}</span>
+        <button onClick={() => set(Math.min(max, value + 1))} style={stepBtn(color)}>+</button>
+      </div>
+    </div>
+  )
+}
+const stepBtn = (c) => ({
+  width: 34, height: 34, borderRadius: 8, border: `1px solid ${c}55`,
+  background: `${c}14`, color: c, fontSize: 20, fontFamily: MONO, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center'
+})
+
 export default function Genera({ draws }) {
   const statiAuto = useMemo(() => statoRegolaPerPosizione(draws), [draws])
   const [override, setOverride] = useState({})
   const [selectedIdx, setSelectedIdx] = useState(0)
+  const [filtro, setFiltro] = useState({ attivo: false, tettoP1: 16, pavimentoP6: 76 })
+
+  const filtroPieno = { ...filtro, tipicoP1: TIPICO_P1, tipicoP6: TIPICO_P6 }
+  const filtroDec = useMemo(() => decidiFiltroEstremi(draws, filtroPieno), [draws, filtro])
 
   // Stato RISOLTO per posizione: se hai forzato a mano usa quello, altrimenti
   // la direzione rilevata dai dati (Auto). È lo stesso oggetto per tutti gli
@@ -43,10 +68,18 @@ export default function Genera({ draws }) {
   // Base NEUTRA: solo punteggio, nessun effetto banda. Da qui applicaOverride
   // sostituisce i numeri secondo lo stato risolto (Spenta = resta il neutro).
   const rankedPerPos = useMemo(() => [0, 1, 2, 3, 4, 5].map(p => rankedCandidates(draws, p)), [draws])
-  const topBase = useMemo(() => generateTopSestine(draws, 10), [draws])
+  // Ranking passato alla banda: filtrato per P1/P6 quando il filtro è attivo,
+  // così l'override della banda non può scavalcare il vincolo.
+  const rankedPerPosEff = useMemo(() => rankedPerPos.map((full, p) => {
+    if (p === 0 && filtroDec.vincoloP1) return full.filter(([num]) => num <= filtro.tettoP1)
+    if (p === 5 && filtroDec.vincoloP6) return full.filter(([num]) => num >= filtro.pavimentoP6)
+    return full
+  }), [rankedPerPos, filtroDec, filtro])
+
+  const topBase = useMemo(() => generateTopSestine(draws, 10, { filtroEstremi: filtroPieno }), [draws, filtro])
   const topSestine = useMemo(
-    () => topBase.map(s => applicaOverride(rankedPerPos, s, statiRisolti)),
-    [topBase, rankedPerPos, statiRisolti]
+    () => topBase.map(s => applicaOverride(rankedPerPosEff, s, statiRisolti)),
+    [topBase, rankedPerPosEff, statiRisolti]
   )
   const recent = useMemo(() => computeRecentWithRank(draws), [draws])
   const sel = topSestine[Math.min(selectedIdx, topSestine.length - 1)]
@@ -61,6 +94,17 @@ export default function Genera({ draws }) {
     return buildProjection(hs, futureLabel, nums, ranks)
   }, [hs, futureLabel, sel])
 
+  const ultima = draws[draws.length - 1][2]
+  const statoFiltro = !filtro.attivo
+    ? 'spento'
+    : filtroDec.vincoloP1 && filtroDec.vincoloP6
+      ? `impone P1 ≤ ${filtro.tettoP1} e P6 ≥ ${filtro.pavimentoP6}`
+      : filtroDec.vincoloP1
+        ? `impone solo P1 ≤ ${filtro.tettoP1} (lato più estremo)`
+        : filtroDec.vincoloP6
+          ? `impone solo P6 ≥ ${filtro.pavimentoP6} (lato più estremo)`
+          : 'ultima nella norma → nessun vincolo questo turno'
+
   return (
     <div>
       {/* Grafico proiezione, compatto e bloccato in cima */}
@@ -70,6 +114,37 @@ export default function Genera({ draws }) {
         </div>
         <PosizioniChart columns={proj.columns} lines={proj.lines} jolly={proj.jolly} height={200} legend={false} />
       </div>
+
+      {/* Filtro riequilibrio estremi */}
+      <section style={styles.section}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ ...styles.h2, margin: 0 }}>Filtro riequilibrio estremi</h2>
+          <button
+            onClick={() => setFiltro(f => ({ ...f, attivo: !f.attivo }))}
+            style={{
+              padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: MONO, fontSize: 12,
+              border: `1px solid ${filtro.attivo ? v.accent : v.borderHi}`,
+              background: filtro.attivo ? v.accent : 'transparent',
+              color: filtro.attivo ? v.bg : v.text
+            }}
+          >{filtro.attivo ? 'ATTIVO' : 'spento'}</button>
+        </div>
+        <p style={styles.caption}>
+          Guarda l'ultima estrazione. Se <strong style={{ color: v.text }}>solo un lato</strong> è fuori norma (P1 alto
+          o P6 basso), la prossima è vincolata su <strong style={{ color: v.text }}>entrambi</strong>: P1 ≤ tetto e P6 ≥ pavimento.
+          Se <strong style={{ color: v.text }}>entrambi</strong> lo sono (era compressa al centro), vincola <strong style={{ color: v.text }}>solo
+          il lato più estremo</strong>. È un filtro di composizione: esclude le code rare che non vuoi vedere — il tasso di vincita non cambia.
+        </p>
+        {filtro.attivo && (
+          <div style={{ ...styles.card, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <StepEstremo label="tetto P1" value={filtro.tettoP1} set={x => setFiltro(f => ({ ...f, tettoP1: x }))} min={8} max={30} color={v.accent} />
+            <StepEstremo label="pavimento P6" value={filtro.pavimentoP6} set={x => setFiltro(f => ({ ...f, pavimentoP6: x }))} min={60} max={82} color={v.hot} />
+          </div>
+        )}
+        <p style={{ fontSize: 11, margin: '8px 0 0', fontFamily: MONO, color: v.muted }}>
+          ultima: P1={ultima[0]} · P6={ultima[5]} → <span style={{ color: filtro.attivo && (filtroDec.vincoloP1 || filtroDec.vincoloP6) ? v.accent : v.dim }}>{statoFiltro}</span>
+        </p>
+      </section>
 
       {/* Regola banda dominante */}
       <section style={styles.section}>
