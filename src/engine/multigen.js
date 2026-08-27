@@ -165,8 +165,35 @@ function solveDP(perPosition) {
 // dall'utente su INCLUDI/ESCLUDI/SPENTA) — vedi src/engine/dominant-band.js.
 // Senza opts (o senza statiBandaDominante), il comportamento è IDENTICO a
 // prima: retro-compatibile.
+// Filtro riequilibrio estremi. Guarda l'ultima estrazione:
+//  A = ultimo P1 sopra il tetto ; B = ultimo P6 sotto il pavimento.
+//  - solo una delle due -> impone ENTRAMBI i vincoli (P1<=tetto E P6>=pavimento)
+//  - entrambe (era compressa al centro) -> impone SOLO il lato piu' estremo
+//    (scarto maggiore dal tipico della posizione), l'altro lato resta libero
+//  - nessuna -> nessun vincolo
+export function decidiFiltroEstremi(draws, filtro) {
+  const out = { vincoloP1: false, vincoloP6: false }
+  if (!filtro || !filtro.attivo || !draws || draws.length === 0) return out
+  const last = draws[draws.length - 1][2]
+  const lastP1 = last[0], lastP6 = last[5]
+  const A = lastP1 > filtro.tettoP1
+  const B = lastP6 < filtro.pavimentoP6
+  const tipP1 = (filtro.tipicoP1 != null) ? filtro.tipicoP1 : 13.4
+  const tipP6 = (filtro.tipicoP6 != null) ? filtro.tipicoP6 : 78.3
+  if (A && B) {
+    if ((lastP1 - tipP1) >= (tipP6 - lastP6)) out.vincoloP1 = true
+    else out.vincoloP6 = true
+  } else if (A || B) {
+    out.vincoloP1 = true
+    out.vincoloP6 = true
+  }
+  return out
+}
+
 export function generateTopSestine(draws, howMany = RESULTS_WANTED, opts = {}) {
   const statiBanda = opts.statiBandaDominante || null
+  const filtroDec = decidiFiltroEstremi(draws, opts.filtroEstremi)
+  const fe = opts.filtroEstremi || {}
   const fullRanking = [] // classifica COMPLETA per posizione, per calcolare il rank vero da mostrare
   const perPosition = [] // [numero, pesoEmpirico] ordinato per NUMERO (serve alla DP)
   const infoPerNumero = [] // Map numero -> {score, rank} per ricostruire il dettaglio dopo
@@ -174,10 +201,14 @@ export function generateTopSestine(draws, howMany = RESULTS_WANTED, opts = {}) {
   for (let p = 0; p < 6; p++) {
     const full = rankedCandidates(draws, p)
     fullRanking.push(full)
+    const rankOf = new Map(full.map(([num], i) => [num, i + 1]))
+    let ammessi = full
+    if (p === 0 && filtroDec.vincoloP1) ammessi = full.filter(([num]) => num <= fe.tettoP1)
+    if (p === 5 && filtroDec.vincoloP6) ammessi = full.filter(([num]) => num >= fe.pavimentoP6)
     const info = new Map()
     const statoPos = statiBanda ? statiBanda[p] : null
-    const pool = full.slice(0, POOL_WIDTH_BY_POSITION[p]).map(([num, score], idx) => {
-      const rank = idx + 1
+    const pool = ammessi.slice(0, POOL_WIDTH_BY_POSITION[p]).map(([num, score]) => {
+      const rank = rankOf.get(num)
       info.set(num, { score, rank })
       const peso = rankProbabilityWeight(p, rank) * fattorePeso(statoPos, rank)
       return [num, peso]
