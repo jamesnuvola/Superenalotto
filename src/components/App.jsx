@@ -6,13 +6,17 @@ import Andamento from './Andamento'
 import Storico from './Storico'
 import Griglia from './Griglia'
 import Componi from './Componi'
+import Ordine from './Ordine'
+import Statistica from './Statistica'
 
 const TABS = [
   { id: 'genera', label: 'Genera' },
   { id: 'andamento', label: 'Andamento' },
   { id: 'storico', label: 'Storico' },
   { id: 'griglia', label: 'Griglia' },
-  { id: 'componi', label: 'Componi' }
+  { id: 'componi', label: 'Componi' },
+  { id: 'ordine', label: 'Ordine' },
+  { id: 'statistica', label: 'Statistica' }
 ]
 
 export default function App() {
@@ -75,6 +79,8 @@ export default function App() {
         {activeTab === 'storico' && <Storico draws={draws} />}
         {activeTab === 'griglia' && <Griglia draws={draws} />}
         {activeTab === 'componi' && <Componi draws={draws} />}
+        {activeTab === 'ordine' && <Ordine />}
+        {activeTab === 'statistica' && <Statistica draws={draws} />}
       </main>
 
       <footer style={{ textAlign: 'center', color: v.dim, fontSize: 11, padding: '20px 0', fontFamily: MONO }}>
