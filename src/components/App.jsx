@@ -6,7 +6,6 @@ import Andamento from './Andamento'
 import Storico from './Storico'
 import Griglia from './Griglia'
 import Componi from './Componi'
-import Ordine from './Ordine'
 import Statistica from './Statistica'
 
 const TABS = [
@@ -15,7 +14,6 @@ const TABS = [
   { id: 'storico', label: 'Storico' },
   { id: 'griglia', label: 'Griglia' },
   { id: 'componi', label: 'Componi' },
-  { id: 'ordine', label: 'Ordine' },
   { id: 'statistica', label: 'Statistica' }
 ]
 
@@ -55,8 +53,8 @@ export default function App() {
                   color: activeTab === t.id ? v.accent : v.muted,
                   border: 'none',
                   borderBottom: activeTab === t.id ? `2px solid ${v.accent}` : '2px solid transparent',
-                  padding: '9px 3px',
-                  fontSize: 11,
+                  padding: '9px 4px',
+                  fontSize: 12,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   fontWeight: activeTab === t.id ? 700 : 400,
@@ -79,7 +77,6 @@ export default function App() {
         {activeTab === 'storico' && <Storico draws={draws} />}
         {activeTab === 'griglia' && <Griglia draws={draws} />}
         {activeTab === 'componi' && <Componi draws={draws} />}
-        {activeTab === 'ordine' && <Ordine />}
         {activeTab === 'statistica' && <Statistica draws={draws} />}
       </main>
 
