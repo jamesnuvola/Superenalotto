@@ -68,6 +68,30 @@ function backtestMix(draws, sets, fromYM, toYM) {
 }
 const somma = a => a.reduce((x, y) => x + y, 0)
 
+// sestina del mix (una per estrazione) e conteggio premi reali (per insieme, col jolly)
+function sestinaMix(h, sets, banda) {
+  const s = []; let prev = 0
+  for (let p = 0; p < 6; p++) {
+    const ranked = rankingPos(h, p, sets[p], banda)
+    for (const r of ranked) { if (r.num > prev && !s.includes(r.num)) { s.push(r.num); prev = r.num; break } }
+  }
+  return s.length === 6 ? s : null
+}
+function premiMix(draws, sets, fromYM, toYM) {
+  const t = { '2': 0, '3': 0, '4': 0, '5': 0, '5+J': 0, '6': 0 }
+  const usaBanda = needBanda(sets)
+  for (let i = 1; i < draws.length; i++) {
+    const y = ymOf(draws[i]); if (y < fromYM || y > toYM) continue
+    const h = draws.slice(0, i)
+    const banda = usaBanda ? statoRegolaPerPosizione(h) : null
+    const g = sestinaMix(h, sets, banda); if (!g) continue
+    const set = new Set(draws[i][2]); let m = 0; g.forEach(n => { if (set.has(n)) m++ })
+    if (m === 5) { const np = g.filter(n => !set.has(n)); if (np.length && np[0] === draws[i][3]) { t['5+J']++; continue } }
+    if (m >= 2) t[String(m)]++
+  }
+  return t
+}
+
 // ricerca ONESTA per una posizione: prova una griglia, sceglie il meglio in TARATURA,
 // riporta il risultato all'ESAME. Non sceglie sull'esame (sarebbe overfitting).
 function cercaPosizione(draws, baseSet, p, tf, tt, ef, et) {
@@ -141,7 +165,8 @@ export default function Statistica({ draws }) {
       const mot = MOTORE_ATTUALE()
       setRes({
         trainS: backtestMix(draws, sets, tf, tt), trainM: backtestMix(draws, mot, tf, tt),
-        testS: backtestMix(draws, sets, ef, et), testM: backtestMix(draws, mot, ef, et)
+        testS: backtestMix(draws, sets, ef, et), testM: backtestMix(draws, mot, ef, et),
+        trainPremi: premiMix(draws, sets, tf, tt), testPremi: premiMix(draws, sets, ef, et)
       })
       setComputing(false)
     }, 30)
@@ -214,6 +239,11 @@ export default function Statistica({ draws }) {
           <strong style={{ color: v.text }}> successivo</strong>. Il confronto è col <strong style={{ color: v.text }}>tuo motore attuale</strong>.
           Dove sei soddisfatto, <strong style={{ color: v.text }}>fissi</strong> la posizione e lavori sulle altre. Nessun blocco: gli avvisi ti informano, decidi tu.
         </p>
+
+        {/* banner informato fisso */}
+        <div style={{ background: `${v.gold}12`, border: `1px solid ${v.gold}44`, borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 11.5, color: v.text, lineHeight: 1.55 }}>
+          <strong style={{ color: v.gold, fontFamily: MONO }}>Da tenere a mente.</strong> Questo esplora il gioco <strong style={{ color: v.text }}>per posizione</strong>. L'<strong style={{ color: v.text }}>esame</strong> è il giudice: ciò che brilla in taratura ma non regge all'esame è <strong style={{ color: v.text }}>rumore</strong>. E i <strong style={{ color: v.text }}>premi</strong> non si migliorano con nessun incastro — ogni sestina vale uguale (0,4 numeri attesi), è matematica. Serve a capire, non a battere il gioco.
+        </div>
 
         {/* periodi */}
         <div style={{ ...styles.card, marginBottom: 10, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -306,6 +336,26 @@ export default function Statistica({ draws }) {
           <h2 style={styles.h2}>Risultato del mix</h2>
           {rigaPos('Taratura — com\'è andata', res.trainS, res.trainM, false)}
           {rigaPos('Esame — se puoi fidartene', res.testS, res.testM, true)}
+          <div style={{ ...styles.card, marginBottom: 8 }}>
+            <div style={{ fontFamily: MONO, color: v.gold, fontSize: 12, marginBottom: 8 }}>Premi reali del mix (una sestina per estrazione)</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: MONO }}>
+              <thead><tr>
+                <th style={{ textAlign: 'left', color: v.muted, padding: '2px 4px' }}>punti</th>
+                {['2', '3', '4', '5', '5+J', '6'].map(k => <th key={k} style={{ color: v.muted, padding: '2px 4px' }}>{k}</th>)}
+              </tr></thead>
+              <tbody>
+                {[['taratura', res.trainPremi], ['esame', res.testPremi]].map(([nome, pr]) => (
+                  <tr key={nome}>
+                    <td style={{ color: nome === 'esame' ? v.accent : v.text, padding: '2px 4px' }}>{nome}</td>
+                    {['2', '3', '4', '5', '5+J', '6'].map(k => <td key={k} style={{ textAlign: 'center', padding: '2px 4px', color: pr[k] > 0 ? (k === '2' ? v.text : v.green) : v.dim }}>{pr[k]}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ fontSize: 10.5, color: v.dim, marginTop: 6, lineHeight: 1.5 }}>
+              Un "2" paga briciole; il primo premio vero è il "3". Qualunque mix, questi numeri restano attorno al caso — è la conferma in vincite di quello che sai.
+            </div>
+          </div>
           <button onClick={salva} style={{ width: '100%', padding: 10, borderRadius: 8, fontFamily: MONO, fontSize: 13, marginTop: 4, cursor: 'pointer', border: `1px solid ${v.accent}`, background: 'transparent', color: v.accent }}>
             Salva questo mix
           </button>
