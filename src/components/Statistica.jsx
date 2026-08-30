@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { v, styles, MONO } from '../utils/constants'
 import { hotScores, delayScores, decadeScores, clusterScores, volatilityScores, coldHScores, POSITION_LABELS } from '../engine/scoring'
 import { statoRegolaPerPosizione, fattorePeso } from '../engine/dominant-band'
-import { decidiFiltroEstremi } from '../engine/multigen'
 
-// ---------- motore di backtest (walk-forward) ----------
+// ---------- motore di backtest (walk-forward, per posizione) ----------
 function nCk(n, k) { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r }
 const ordScore = (p, val) => nCk(val - 1, p) * nCk(90 - val, 5 - p)
-function normMax(map) { let mx = 1e-9; for (const v of map.values()) if (v > mx) mx = v; const o = new Map(); for (const [k, v] of map) o.set(k, v / mx); return o }
+function normMax(map) { let mx = 1e-9; for (const val of map.values()) if (val > mx) mx = val; const o = new Map(); for (const [k, val] of map) o.set(k, val / mx); return o }
 const RULE_FN = { decade: decadeScores, hot: hotScores, cluster: clusterScores, vol: volatilityScores, delay: delayScores, cold: coldHScores }
 const RULE_LABEL = { decade: 'DECADE', hot: 'HOT_V', cluster: 'CLUSTER', vol: 'VERTVOL', delay: 'DELAY_V', cold: 'COLD_H' }
+const ALL_RULES = { decade: true, hot: true, cluster: true, vol: true, delay: true, cold: true }
 
 function customComposite(h, p, rules) {
   const active = Object.keys(RULE_FN).filter(k => rules[k])
@@ -21,15 +21,16 @@ function customComposite(h, p, rules) {
   return out
 }
 
-function scoreMap(h, p, set, bandaStato) {
+// classifica (num, rank) per una posizione dato un settaggio
+function rankingPos(h, p, set, bandaStato) {
   let base
-  if (set.base === 'ordstat') { base = new Map(); for (let v = 1; v <= 90; v++) base.set(v, ordScore(p, v)) }
+  if (set.base === 'ordstat') { base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, ordScore(p, val)) }
   else {
     const comp = customComposite(h, p, set.rules)
     if (set.base === 'composito') base = comp
     else {
-      const cn = normMax(comp); let omx = 1e-9; for (let v = 1; v <= 90; v++) omx = Math.max(omx, ordScore(p, v))
-      base = new Map(); for (let v = 1; v <= 90; v++) base.set(v, (1 - set.alpha) * (cn.get(v) || 0) + set.alpha * (ordScore(p, v) / omx))
+      const cn = normMax(comp); let omx = 1e-9; for (let val = 1; val <= 90; val++) omx = Math.max(omx, ordScore(p, val))
+      base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, (1 - set.alpha) * (cn.get(val) || 0) + set.alpha * (ordScore(p, val) / omx))
     }
   }
   if (set.banda && bandaStato) {
@@ -37,25 +38,27 @@ function scoreMap(h, p, set, bandaStato) {
     const w = new Map(); ranked.forEach(([num], i) => w.set(num, base.get(num) * fattorePeso(bandaStato[p], i + 1)))
     base = w
   }
-  return base
+  let ranked = [...base.entries()].sort((a, b) => b[1] - a[1]).map(([num], i) => ({ num, rank: i + 1 }))
+  if (set.numMin > 1 || set.numMax < 90) ranked = ranked.filter(r => r.num >= set.numMin && r.num <= set.numMax)
+  if (set.rankMin > 1 || set.rankMax < 90) ranked = ranked.filter(r => r.rank >= set.rankMin && r.rank <= set.rankMax)
+  return ranked
 }
 
 const ymOf = d => { const [g, m, a] = d[0].split('/').map(Number); return a * 100 + m }
+const needBanda = sets => sets.some(s => s && s.banda)
 
-function backtest(draws, set, fromYM, toYM) {
+// backtest: per ogni posizione usa il suo settaggio; ritorna hit@3 e hit@1 per posizione
+function backtestMix(draws, sets, fromYM, toYM) {
   const hit1 = [0, 0, 0, 0, 0, 0], hit3 = [0, 0, 0, 0, 0, 0]; let n = 0
-  const filtroPieno = set.filtro && set.filtro.attivo ? { ...set.filtro, tipicoP1: 13.4, tipicoP6: 78.3 } : null
+  const usaBanda = needBanda(sets)
   for (let t = 1; t < draws.length; t++) {
     const y = ymOf(draws[t]); if (y < fromYM || y > toYM) continue
     const h = draws.slice(0, t)
-    const banda = set.banda ? statoRegolaPerPosizione(h) : null
-    const dec = filtroPieno ? decidiFiltroEstremi(h, filtroPieno) : { vincoloP1: false, vincoloP6: false }
+    const banda = usaBanda ? statoRegolaPerPosizione(h) : null
     const real = draws[t][2]
     for (let p = 0; p < 6; p++) {
-      let entries = [...scoreMap(h, p, set, banda).entries()]
-      if (p === 0 && dec.vincoloP1) entries = entries.filter(([num]) => num <= filtroPieno.tettoP1)
-      if (p === 5 && dec.vincoloP6) entries = entries.filter(([num]) => num >= filtroPieno.pavimentoP6)
-      const t3 = entries.sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0])
+      const ranked = rankingPos(h, p, sets[p], banda)
+      const t3 = ranked.slice(0, 3).map(r => r.num)
       if (t3[0] === real[p]) hit1[p]++
       if (t3.includes(real[p])) hit3[p]++
     }
@@ -65,8 +68,44 @@ function backtest(draws, set, fromYM, toYM) {
 }
 const somma = a => a.reduce((x, y) => x + y, 0)
 
+// ricerca ONESTA per una posizione: prova una griglia, sceglie il meglio in TARATURA,
+// riporta il risultato all'ESAME. Non sceglie sull'esame (sarebbe overfitting).
+function cercaPosizione(draws, baseSet, p, tf, tt, ef, et) {
+  const griglia = []
+  for (const base of ['composito', 'ordstat', 'miscela']) {
+    const alphas = base === 'miscela' ? [0.5, 0.75] : [1]
+    for (const alpha of alphas) for (const banda of [false, true]) {
+      griglia.push({ ...baseSet, base, alpha, banda })
+    }
+  }
+  let best = griglia[0], bestSc = -1
+  for (const g of griglia) {
+    const r = backtestUnaPos(draws, g, p, tf, tt)
+    if (r > bestSc) { bestSc = r; best = g }
+  }
+  const trainHit = backtestUnaPos(draws, best, p, tf, tt)
+  const examHit = backtestUnaPos(draws, best, p, ef, et)
+  return { best, trainHit, examHit, provati: griglia.length }
+}
+function backtestUnaPos(draws, set, p, fromYM, toYM) {
+  let hit3 = 0
+  const usaBanda = set.banda
+  for (let t = 1; t < draws.length; t++) {
+    const y = ymOf(draws[t]); if (y < fromYM || y > toYM) continue
+    const h = draws.slice(0, t)
+    const banda = usaBanda ? statoRegolaPerPosizione(h) : null
+    const ranked = rankingPos(h, p, set, banda)
+    if (ranked.slice(0, 3).map(r => r.num).includes(draws[t][2][p])) hit3++
+  }
+  return hit3
+}
+
 // ---------- UI ----------
 const parseM = s => { if (!s) return null; const [a, m] = s.split('-').map(Number); return a * 100 + m }
+const LABELS = POSITION_LABELS || ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']
+const nuovoSet = () => ({ base: 'composito', alpha: 0.75, rules: { ...ALL_RULES }, banda: false, numMin: 1, numMax: 90, rankMin: 1, rankMax: 90, locked: false })
+// il "motore attuale": composito con tutte le regole + banda (come gira Genera)
+const MOTORE_ATTUALE = () => [0, 1, 2, 3, 4, 5].map(() => ({ base: 'composito', alpha: 1, rules: { ...ALL_RULES }, banda: true, numMin: 1, numMax: 90, rankMin: 1, rankMax: 90 }))
 
 function Toggle({ on, set, label, color = v.accent }) {
   return (
@@ -82,167 +121,195 @@ export default function Statistica({ draws }) {
   const [trainTo, setTrainTo] = useState('2026-06')
   const [testFrom, setTestFrom] = useState('2026-07')
   const [testTo, setTestTo] = useState('2026-08')
-  const [base, setBase] = useState('composito') // composito | ordstat | miscela
-  const [alpha, setAlpha] = useState(0.75)
-  const [rules, setRules] = useState({ decade: true, hot: true, cluster: true, vol: true, delay: true, cold: true })
-  const [banda, setBanda] = useState(false)
-  const [filtro, setFiltro] = useState({ attivo: false, tettoP1: 16, pavimentoP6: 76 })
+  const [sets, setSets] = useState([0, 1, 2, 3, 4, 5].map(nuovoSet))
+  const [posSel, setPosSel] = useState(0)
   const [res, setRes] = useState(null)
   const [computing, setComputing] = useState(false)
-  const [salvato, setSalvato] = useState(false)
+  const [avviso, setAvviso] = useState(null)
+  const [ricerca, setRicerca] = useState(null)
+  const [searching, setSearching] = useState(false)
 
-  const setting = { base, alpha, rules, banda, filtro }
+  const cur = sets[posSel]
+  const upd = (campo, val) => setSets(a => a.map((s, i) => i === posSel ? { ...s, [campo]: val } : s))
+  const updRule = (k, val) => setSets(a => a.map((s, i) => i === posSel ? { ...s, rules: { ...s.rules, [k]: val } } : s))
+  const periods = () => ({ tf: parseM(trainFrom), tt: parseM(trainTo), ef: parseM(testFrom), et: parseM(testTo) })
 
   const calcola = () => {
-    setComputing(true); setSalvato(false); setRes(null)
+    setComputing(true); setAvviso(null); setRicerca(null)
     setTimeout(() => {
-      const tf = parseM(trainFrom), tt = parseM(trainTo), ef = parseM(testFrom), et = parseM(testTo)
-      const ordSet = { base: 'ordstat', alpha: 1, rules: {}, banda: false, filtro: { attivo: false } }
-      const trainS = backtest(draws, setting, tf, tt), trainO = backtest(draws, ordSet, tf, tt)
-      const testS = backtest(draws, setting, ef, et), testO = backtest(draws, ordSet, ef, et)
-      setRes({ trainS, trainO, testS, testO })
+      const { tf, tt, ef, et } = periods()
+      const mot = MOTORE_ATTUALE()
+      setRes({
+        trainS: backtestMix(draws, sets, tf, tt), trainM: backtestMix(draws, mot, tf, tt),
+        testS: backtestMix(draws, sets, ef, et), testM: backtestMix(draws, mot, ef, et)
+      })
       setComputing(false)
     }, 30)
   }
 
+  const cerca = () => {
+    setSearching(true); setRicerca(null); setAvviso(null)
+    setTimeout(() => {
+      const { tf, tt, ef, et } = periods()
+      setRicerca({ p: posSel, ...cercaPosizione(draws, cur, posSel, tf, tt, ef, et) })
+      setSearching(false)
+    }, 30)
+  }
+  const applicaRicerca = () => { if (ricerca) { const b = ricerca.best; upd('base', b.base); upd('alpha', b.alpha); upd('banda', b.banda) } setRicerca(null) }
+
+  const toggleLock = () => upd('locked', !cur.locked)
+  const applicaTutte = () => setSets(a => a.map(s => s.locked ? s : { ...s, base: cur.base, alpha: cur.alpha, rules: { ...cur.rules }, banda: cur.banda }))
+
   const salva = () => {
-    try { localStorage.setItem('sonar_setting', JSON.stringify(setting)); setSalvato(true) } catch (e) { setSalvato(false) }
+    try {
+      localStorage.setItem('sonar_setting_mix', JSON.stringify(sets))
+      if (res && somma(res.testS.hit3) < somma(res.testM.hit3)) {
+        setAvviso(`Salvato. Avviso: all'esame questo mix fa ${somma(res.testS.hit3)} contro ${somma(res.testM.hit3)} del tuo motore attuale — sul futuro potrebbe rendere meno. L'hai salvato lo stesso, la scelta è tua.`)
+      } else {
+        setAvviso('Salvato. ' + (res ? 'Batte (o pareggia) il tuo motore all\'esame.' : 'Nessun backtest eseguito: salvato senza verifica.'))
+      }
+    } catch (e) { setAvviso('Non sono riuscito a salvare nella memoria del browser.') }
   }
 
-  const testBatte = res && somma(res.testS.hit3) >= somma(res.testO.hit3)
-
-  const renderPeriodo = (nome, s, o, esame) => {
-    const dS3 = somma(s.hit3), dO3 = somma(o.hit3), dS1 = somma(s.hit1), dO1 = somma(o.hit1)
-    const diff = dS3 - dO3
-    return (
-      <div style={{ ...styles.card, marginBottom: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-          <strong style={{ fontFamily: MONO, color: esame ? v.accent : v.text }}>{nome}</strong>
-          <span style={{ fontSize: 11, color: v.muted, fontFamily: MONO }}>{s.n} estrazioni</span>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: MONO }}>
-            <thead><tr>
-              <th style={{ textAlign: 'left', color: v.muted, padding: '3px 4px' }}>hit@3</th>
-              {POSITION_LABELS.map(l => <th key={l} style={{ color: v.muted, padding: '3px 4px' }}>{l}</th>)}
-              <th style={{ color: v.muted, padding: '3px 4px' }}>tot</th>
-            </tr></thead>
-            <tbody>
-              <tr>
-                <td style={{ color: v.text, padding: '3px 4px' }}>settaggio</td>
-                {s.hit3.map((x, i) => <td key={i} style={{ textAlign: 'center', color: v.text, padding: '3px 4px' }}>{x}</td>)}
-                <td style={{ textAlign: 'center', color: v.accent, fontWeight: 700, padding: '3px 4px' }}>{dS3}</td>
-              </tr>
-              <tr>
-                <td style={{ color: v.muted, padding: '3px 4px' }}>ordstat</td>
-                {o.hit3.map((x, i) => <td key={i} style={{ textAlign: 'center', color: v.muted, padding: '3px 4px' }}>{x}</td>)}
-                <td style={{ textAlign: 'center', color: v.muted, fontWeight: 700, padding: '3px 4px' }}>{dO3}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div style={{ fontSize: 11, marginTop: 6, fontFamily: MONO, color: diff > 0 ? v.green : diff < 0 ? v.hot : v.muted }}>
-          hit@3 settaggio {dS3} vs ordstat {dO3} → {diff > 0 ? '+' : ''}{diff}
-          {esame && <strong>{diff >= 0 ? '  ✓ regge sul futuro' : '  ✗ perde sul futuro (rumore)'}</strong>}
-          <span style={{ color: v.dim }}>  ·  hit@1: {dS1} vs {dO1}</span>
-        </div>
+  const rigaPos = (nome, s, m, esame) => (
+    <div style={{ ...styles.card, marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <strong style={{ fontFamily: MONO, color: esame ? v.accent : v.text, fontSize: 12 }}>{nome}</strong>
+        <span style={{ fontSize: 11, color: v.muted, fontFamily: MONO }}>{s.n} estr.</span>
       </div>
-    )
-  }
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: MONO }}>
+        <thead><tr>
+          <th style={{ textAlign: 'left', color: v.muted, padding: '2px 3px' }}>hit@3</th>
+          {LABELS.map(l => <th key={l} style={{ color: v.muted, padding: '2px 3px' }}>{l}</th>)}
+          <th style={{ color: v.muted, padding: '2px 3px' }}>tot</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style={{ color: v.text, padding: '2px 3px' }}>mix</td>
+            {s.hit3.map((x, i) => {
+              const meglio = x > m.hit3[i], peggio = x < m.hit3[i]
+              return <td key={i} style={{ textAlign: 'center', padding: '2px 3px', color: meglio ? v.green : peggio ? v.hot : v.text }}>{x}</td>
+            })}
+            <td style={{ textAlign: 'center', color: v.accent, fontWeight: 700, padding: '2px 3px' }}>{somma(s.hit3)}</td>
+          </tr>
+          <tr>
+            <td style={{ color: v.muted, padding: '2px 3px' }}>motore</td>
+            {m.hit3.map((x, i) => <td key={i} style={{ textAlign: 'center', color: v.muted, padding: '2px 3px' }}>{x}</td>)}
+            <td style={{ textAlign: 'center', color: v.muted, fontWeight: 700, padding: '2px 3px' }}>{somma(m.hit3)}</td>
+          </tr>
+        </tbody>
+      </table>
+      {esame && <div style={{ fontSize: 11, marginTop: 5, fontFamily: MONO, color: somma(s.hit3) >= somma(m.hit3) ? v.green : v.hot }}>
+        {somma(s.hit3) >= somma(m.hit3) ? '✓ il mix regge sul futuro' : '✗ il mix perde sul futuro (probabile rumore) — ma decidi tu'}
+      </div>}
+    </div>
+  )
 
   return (
     <div>
       <section style={styles.section}>
-        <h2 style={styles.h2}>Statistica — laboratorio di backtest</h2>
+        <h2 style={styles.h2}>Statistica — laboratorio per posizione</h2>
         <p style={styles.caption}>
-          Provi un settaggio su un periodo di <strong style={{ color: v.text }}>taratura</strong> e lo esamini su un periodo
-          <strong style={{ color: v.text }}> successivo</strong> che non ha visto. Conta solo l'esame: se un settaggio va forte in taratura
-          ma perde all'esame, era fortuna (rumore). Se regge all'esame, è vero — e lo salvi. Metrica: hit@1 e hit@3 per posizione,
-          walk-forward, contro la statistica d'ordine come riferimento.
+          Tari un settaggio <strong style={{ color: v.text }}>per ogni posizione</strong> su un periodo, e lo esamini su uno
+          <strong style={{ color: v.text }}> successivo</strong>. Il confronto è col <strong style={{ color: v.text }}>tuo motore attuale</strong>.
+          Dove sei soddisfatto, <strong style={{ color: v.text }}>fissi</strong> la posizione e lavori sulle altre. Nessun blocco: gli avvisi ti informano, decidi tu.
         </p>
 
         {/* periodi */}
-        <div style={{ ...styles.card, marginBottom: 10 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 11, color: v.text, fontFamily: MONO, marginBottom: 4 }}>Taratura</div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="month" value={trainFrom} onChange={e => setTrainFrom(e.target.value)} style={dateInput} />
-                <span style={{ color: v.muted }}>→</span>
-                <input type="month" value={trainTo} onChange={e => setTrainTo(e.target.value)} style={dateInput} />
-              </div>
+        <div style={{ ...styles.card, marginBottom: 10, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 11, color: v.text, fontFamily: MONO, marginBottom: 4 }}>Taratura</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="month" value={trainFrom} onChange={e => setTrainFrom(e.target.value)} style={dateInput} />
+              <span style={{ color: v.muted }}>→</span>
+              <input type="month" value={trainTo} onChange={e => setTrainTo(e.target.value)} style={dateInput} />
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: v.accent, fontFamily: MONO, marginBottom: 4 }}>Esame</div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="month" value={testFrom} onChange={e => setTestFrom(e.target.value)} style={dateInput} />
-                <span style={{ color: v.muted }}>→</span>
-                <input type="month" value={testTo} onChange={e => setTestTo(e.target.value)} style={dateInput} />
-              </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: v.accent, fontFamily: MONO, marginBottom: 4 }}>Esame</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="month" value={testFrom} onChange={e => setTestFrom(e.target.value)} style={dateInput} />
+              <span style={{ color: v.muted }}>→</span>
+              <input type="month" value={testTo} onChange={e => setTestTo(e.target.value)} style={dateInput} />
             </div>
           </div>
         </div>
 
-        {/* ranking base */}
-        <div style={{ ...styles.card, marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: v.muted, fontFamily: MONO, marginBottom: 6 }}>Ranking base</div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: base === 'miscela' ? 10 : 0 }}>
-            {[['composito', 'Composito'], ['ordstat', "Statistica d'ordine"], ['miscela', 'Miscela']].map(([k, l]) => (
-              <Toggle key={k} on={base === k} set={() => setBase(k)} label={l} />
+        {/* selettore posizione */}
+        <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+          {LABELS.map((l, p) => (
+            <button key={l} onClick={() => setPosSel(p)} style={{
+              flex: 1, padding: '7px 2px', borderRadius: 6, cursor: 'pointer', fontFamily: MONO, fontSize: 12,
+              border: `1px solid ${posSel === p ? v.accent : v.border}`,
+              background: posSel === p ? `${v.accent}1a` : v.card,
+              color: sets[p].locked ? v.green : posSel === p ? v.accent : v.muted
+            }}>{l}{sets[p].locked ? ' •' : ''}</button>
+          ))}
+        </div>
+
+        {/* controlli della posizione selezionata */}
+        <div style={{ ...styles.card, marginBottom: 10, opacity: cur.locked ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <strong style={{ fontFamily: MONO, color: v.text }}>{LABELS[posSel]}{cur.locked ? ' — fissata' : ''}</strong>
+            <button onClick={toggleLock} style={{
+              padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: MONO, fontSize: 11,
+              border: `1px solid ${cur.locked ? v.green : v.borderHi}`, background: cur.locked ? v.green : 'transparent', color: cur.locked ? v.bg : v.text
+            }}>{cur.locked ? '✓ fissata' : 'Fissa questa posizione'}</button>
+          </div>
+          <div style={{ fontSize: 11, color: v.muted, fontFamily: MONO, marginBottom: 6 }}>ranking</div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: cur.base === 'miscela' ? 10 : 8 }}>
+            {[['composito', 'Composito'], ['ordstat', 'Ordine'], ['miscela', 'Miscela']].map(([k, l]) => (
+              <Toggle key={k} on={cur.base === k} set={() => upd('base', k)} label={l} />
             ))}
           </div>
-          {base === 'miscela' && (
-            <div style={{ fontSize: 11, fontFamily: MONO, color: v.muted }}>
-              peso ordstat: {alpha.toFixed(2)}
-              <input type="range" min="0" max="1" step="0.05" value={alpha} onChange={e => setAlpha(parseFloat(e.target.value))} style={{ width: '100%' }} />
+          {cur.base === 'miscela' && (
+            <div style={{ fontSize: 11, fontFamily: MONO, color: v.muted, marginBottom: 8 }}>
+              peso ordine: {cur.alpha.toFixed(2)}
+              <input type="range" min="0" max="1" step="0.05" value={cur.alpha} onChange={e => upd('alpha', parseFloat(e.target.value))} style={{ width: '100%' }} />
             </div>
           )}
-        </div>
-
-        {/* regole */}
-        <div style={{ ...styles.card, marginBottom: 10, opacity: base === 'ordstat' ? 0.4 : 1 }}>
-          <div style={{ fontSize: 11, color: v.muted, fontFamily: MONO, marginBottom: 6 }}>
-            Le 6 regole {base === 'ordstat' && '(non attive con statistica d\'ordine pura)'}
+          <div style={{ opacity: cur.base === 'ordstat' ? 0.4 : 1, marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: v.dim, fontFamily: MONO, marginBottom: 4 }}>regole</div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {Object.keys(RULE_FN).map(k => <Toggle key={k} on={cur.rules[k]} set={x => updRule(k, x)} label={RULE_LABEL[k]} color={v.green} />)}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {Object.keys(RULE_FN).map(k => (
-              <Toggle key={k} on={rules[k]} set={x => setRules(r => ({ ...r, [k]: x }))} label={RULE_LABEL[k]} color={v.green} />
-            ))}
-          </div>
-        </div>
-
-        {/* banda + filtro */}
-        <div style={{ ...styles.card, marginBottom: 12, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Toggle on={banda} set={setBanda} label={banda ? 'Banda: ON' : 'Banda: off'} />
-          <Toggle on={filtro.attivo} set={x => setFiltro(f => ({ ...f, attivo: x }))} label={filtro.attivo ? 'Filtro estremi: ON' : 'Filtro estremi: off'} color={v.hot} />
-          {filtro.attivo && (
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+            <Toggle on={cur.banda} set={x => upd('banda', x)} label={cur.banda ? 'Banda: ON' : 'Banda: off'} />
             <span style={{ fontSize: 11, fontFamily: MONO, color: v.muted }}>
-              tetto P1
-              <input type="number" value={filtro.tettoP1} onChange={e => setFiltro(f => ({ ...f, tettoP1: +e.target.value }))} style={numInput} />
-              pavimento P6
-              <input type="number" value={filtro.pavimentoP6} onChange={e => setFiltro(f => ({ ...f, pavimentoP6: +e.target.value }))} style={numInput} />
+              num<input type="number" value={cur.numMin} onChange={e => upd('numMin', +e.target.value)} style={miniInput} />–<input type="number" value={cur.numMax} onChange={e => upd('numMax', +e.target.value)} style={miniInput} />
             </span>
+            <span style={{ fontSize: 11, fontFamily: MONO, color: v.muted }}>
+              rank<input type="number" value={cur.rankMin} onChange={e => upd('rankMin', +e.target.value)} style={miniInput} />–<input type="number" value={cur.rankMax} onChange={e => upd('rankMax', +e.target.value)} style={miniInput} />
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={cerca} disabled={searching} style={btnSec(searching)}>{searching ? 'cerco…' : 'Cerca per questa posizione'}</button>
+            <button onClick={applicaTutte} style={btnSec(false)}>Applica a tutte (non fissate)</button>
+          </div>
+          {ricerca && ricerca.p === posSel && (
+            <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: v.surface, border: `1px solid ${v.border}` }}>
+              <div style={{ fontSize: 11, fontFamily: MONO, color: v.text }}>
+                Migliore in taratura: <strong>{ricerca.best.base}{ricerca.best.base === 'miscela' ? ` α${ricerca.best.alpha}` : ''}{ricerca.best.banda ? '+banda' : ''}</strong>.
+                All'esame: {ricerca.examHit} hit@3 (taratura {ricerca.trainHit}).
+              </div>
+              <button onClick={applicaRicerca} style={{ ...btnSec(false), marginTop: 6 }}>Applica a {LABELS[posSel]}</button>
+            </div>
           )}
         </div>
 
-        <button onClick={calcola} disabled={computing} style={{
-          width: '100%', padding: 12, borderRadius: 8, fontFamily: MONO, fontSize: 14, cursor: computing ? 'default' : 'pointer',
-          border: 'none', background: computing ? v.borderHi : v.accent, color: v.bg, fontWeight: 700
-        }}>{computing ? 'calcolo…' : 'Calcola backtest'}</button>
+        <button onClick={calcola} disabled={computing || searching} style={btnPri(computing)}>{computing ? 'calcolo…' : 'Calcola il mix (tutte le posizioni)'}</button>
       </section>
 
       {res && (
         <section style={styles.section}>
-          <h2 style={styles.h2}>Risultato</h2>
-          {renderPeriodo('Taratura — com\'è andata', res.trainS, res.trainO, false)}
-          {renderPeriodo('Esame — se puoi fidartene', res.testS, res.testO, true)}
-          <button onClick={salva} disabled={!testBatte} style={{
-            width: '100%', padding: 10, borderRadius: 8, fontFamily: MONO, fontSize: 13, marginTop: 4,
-            cursor: testBatte ? 'pointer' : 'default', border: `1px solid ${testBatte ? v.green : v.borderHi}`,
-            background: 'transparent', color: testBatte ? v.green : v.muted
-          }}>
-            {salvato ? '✓ settaggio salvato' : testBatte ? 'Salva questo settaggio' : 'Non batte il riferimento all\'esame — non salvabile'}
+          <h2 style={styles.h2}>Risultato del mix</h2>
+          {rigaPos('Taratura — com\'è andata', res.trainS, res.trainM, false)}
+          {rigaPos('Esame — se puoi fidartene', res.testS, res.testM, true)}
+          <button onClick={salva} style={{ width: '100%', padding: 10, borderRadius: 8, fontFamily: MONO, fontSize: 13, marginTop: 4, cursor: 'pointer', border: `1px solid ${v.accent}`, background: 'transparent', color: v.accent }}>
+            Salva questo mix
           </button>
+          {avviso && <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: `${v.gold}14`, border: `1px solid ${v.gold}55`, fontSize: 12, color: v.text, lineHeight: 1.5 }}>{avviso}</div>}
         </section>
       )}
     </div>
@@ -250,4 +317,6 @@ export default function Statistica({ draws }) {
 }
 
 const dateInput = { padding: '6px 8px', borderRadius: 6, border: `1px solid ${v.borderHi}`, background: v.card, color: v.text, fontFamily: MONO, fontSize: 12 }
-const numInput = { width: 46, marginLeft: 4, marginRight: 10, padding: '3px 5px', borderRadius: 5, border: `1px solid ${v.borderHi}`, background: v.card, color: v.text, fontFamily: MONO, fontSize: 12 }
+const miniInput = { width: 40, margin: '0 2px', padding: '3px 4px', borderRadius: 5, border: `1px solid ${v.borderHi}`, background: v.card, color: v.text, fontFamily: MONO, fontSize: 12 }
+const btnPri = (busy) => ({ width: '100%', padding: 12, borderRadius: 8, fontFamily: MONO, fontSize: 14, cursor: busy ? 'default' : 'pointer', border: 'none', background: busy ? v.borderHi : v.accent, color: v.bg, fontWeight: 700 })
+const btnSec = (busy) => ({ flex: 1, padding: '9px 8px', borderRadius: 7, fontFamily: MONO, fontSize: 11, cursor: busy ? 'default' : 'pointer', border: `1px solid ${v.accent}`, background: 'transparent', color: v.accent })
