@@ -1,7 +1,10 @@
-import { useState } from 'react'
-import { v, styles, MONO } from '../utils/constants'
+import { useState, useMemo } from 'react'
+import { v, styles, MONO, P, ballStyle } from '../utils/constants'
 import { hotScores, delayScores, decadeScores, clusterScores, volatilityScores, coldHScores, POSITION_LABELS } from '../engine/scoring'
 import { statoRegolaPerPosizione, fattorePeso } from '../engine/dominant-band'
+import { RANK_BANDS_BY_POSITION } from '../engine/multigen'
+import PosizioniChart, { historicalSeries, stimaProssimaData } from './PosizioniChart'
+import { buildProjection } from './proiezione'
 
 // ---------- motore di backtest (walk-forward, per posizione) ----------
 function nCk(n, k) { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r }
@@ -102,6 +105,33 @@ function premiMix(draws, sets, fromYM, toYM) {
   return t
 }
 
+// genera N sestine col mix, coi rank REALISTICI per posizione (come la SERIA), non tutti a rank 1
+function generaMix(draws, sets, quante) {
+  const banda = needBanda(sets) ? statoRegolaPerPosizione(draws) : null
+  const perPos = [0, 1, 2, 3, 4, 5].map(p => rankingPos(draws, p, sets[p], banda))
+  const poolSize = perPos.map(rk => rk.length)
+  const rankOf = perPos.map(rk => { const m = new Map(); rk.forEach(r => m.set(r.num, r.rank)); return m })
+  const target = [0, 1, 2, 3, 4, 5].map(p => RANK_BANDS_BY_POSITION[p].mediana)
+  const sestine = []; const seen = new Set()
+  for (let a = 0; a < quante * 60 && sestine.length < quante; a++) {
+    const s = []; let prev = 0; let ok = true
+    for (let p = 0; p < 6; p++) {
+      const cands = perPos[p].filter(r => r.num > prev && !s.includes(r.num))
+      if (!cands.length) { ok = false; break }
+      const tg = Math.max(1, target[p] + (Math.random() - 0.5) * target[p]) // rank tipico + variabilità
+      let best = cands[0], bd = Infinity
+      for (const r of cands) { const d = Math.abs(r.rank - tg); if (d < bd) { bd = d; best = r } }
+      s.push(best.num); prev = best.num
+    }
+    if (ok && s.length === 6) { const key = s.join(','); if (!seen.has(key)) { seen.add(key); sestine.push(s) } }
+  }
+  return sestine.map(nums => ({
+    nums,
+    dett: nums.map((num, p) => ({ num, rank: rankOf[p].get(num), pool: poolSize[p] })),
+    rankMedio: nums.reduce((acc, num, p) => acc + (rankOf[p].get(num) || 0), 0) / 6
+  }))
+}
+
 // ricerca ONESTA per una posizione: prova una griglia, sceglie il meglio in TARATURA,
 // riporta il risultato all'ESAME. Non sceglie sull'esame (sarebbe overfitting).
 function cercaPosizione(draws, baseSet, p, tf, tt, ef, et) {
@@ -174,11 +204,21 @@ export default function Statistica({ draws }) {
   const [avviso, setAvviso] = useState(null)
   const [ricerca, setRicerca] = useState(null)
   const [searching, setSearching] = useState(false)
+  const [genRes, setGenRes] = useState(null)
+  const [generating, setGenerating] = useState(false)
+  const [selGen, setSelGen] = useState(0)
 
   const cur = sets[posSel]
   const upd = (campo, val) => setSets(a => a.map((s, i) => i === posSel ? { ...s, [campo]: val } : s))
   const updRule = (k, val) => setSets(a => a.map((s, i) => i === posSel ? { ...s, rules: { ...s.rules, [k]: val } } : s))
   const periods = () => ({ tf: parseM(trainFrom), tt: parseM(trainTo), ef: parseM(testFrom), et: parseM(testTo) })
+  const hs = useMemo(() => historicalSeries(draws, 15), [draws])
+  const futureLabel = useMemo(() => stimaProssimaData(draws), [draws])
+  const projGen = useMemo(() => {
+    if (!genRes || !genRes.length) return null
+    const s = genRes[Math.min(selGen, genRes.length - 1)]
+    return buildProjection(hs, futureLabel, s.nums, s.dett.map(d => d.rank))
+  }, [genRes, selGen, hs, futureLabel])
 
   const calcola = () => {
     setComputing(true); setAvviso(null); setRicerca(null)
@@ -203,6 +243,11 @@ export default function Statistica({ draws }) {
     }, 30)
   }
   const applicaRicerca = () => { if (ricerca) { const b = ricerca.best; upd('base', b.base); upd('alpha', b.alpha); upd('banda', b.banda) } setRicerca(null) }
+
+  const generaConMix = () => {
+    setGenerating(true); setGenRes(null); setSelGen(0)
+    setTimeout(() => { setGenRes(generaMix(draws, sets, 8)); setGenerating(false) }, 30)
+  }
 
   const toggleLock = () => upd('locked', !cur.locked)
   const applicaTutte = () => setSets(a => a.map(s => s.locked ? s : { ...s, base: cur.base, alpha: cur.alpha, rules: { ...cur.rules }, banda: cur.banda }))
@@ -354,7 +399,10 @@ export default function Statistica({ draws }) {
           )}
         </div>
 
-        <button onClick={calcola} disabled={computing || searching} style={btnPri(computing)}>{computing ? 'calcolo…' : 'Calcola il mix (tutte le posizioni)'}</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={calcola} disabled={computing || searching || generating} style={btnPri(computing)}>{computing ? 'calcolo…' : 'Calcola il mix'}</button>
+          <button onClick={generaConMix} disabled={computing || searching || generating} style={btnSec(generating)}>{generating ? 'genero…' : 'Genera sestine col mix'}</button>
+        </div>
       </section>
 
       {res && (
@@ -386,6 +434,34 @@ export default function Statistica({ draws }) {
             Salva questo mix
           </button>
           {avviso && <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: `${v.gold}14`, border: `1px solid ${v.gold}55`, fontSize: 12, color: v.text, lineHeight: 1.5 }}>{avviso}</div>}
+        </section>
+      )}
+
+      {genRes && (
+        <section style={styles.section}>
+          <h2 style={styles.h2}>Sestine col mix in prova</h2>
+          <p style={styles.caption}>
+            Generate col settaggio che stai tarando qui sopra — <strong style={{ color: v.text }}>non</strong> col motore attuale, così le confronti con la pagina Genera.
+            Tocca una sestina per vederla sul grafico; ogni numero mostra il suo rank nella posizione, come nella pagina principale.
+          </p>
+          {genRes.length === 0 && <p style={{ color: v.hot, fontSize: 13 }}>I filtri per posizione sono troppo stretti per formare una sestina valida — allarga gli intervalli.</p>}
+          {projGen && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: v.muted, margin: '0 0 6px' }}>Sestina #{selGen + 1} proiettata alla prossima estrazione ({futureLabel})</div>
+              <PosizioniChart columns={projGen.columns} lines={projGen.lines} jolly={projGen.jolly} />
+            </div>
+          )}
+          {genRes.map((s, i) => (
+            <div key={i} onClick={() => setSelGen(i)} style={{ ...styles.card, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 8, cursor: 'pointer', outline: selGen === i ? `2px solid ${v.accent}` : 'none' }}>
+              {s.dett.map((d, j) => (
+                <div key={j} style={{ textAlign: 'center' }}>
+                  <span style={{ ...ballStyle(P[j % 6], 40, 15), margin: '0 auto' }}>{d.num}</span>
+                  <div style={{ fontSize: 10, color: v.muted, marginTop: 4, fontFamily: MONO }}>P{j + 1} · r{d.rank}/{d.pool}</div>
+                </div>
+              ))}
+              <div style={{ width: '100%', fontSize: 10, color: v.dim, fontFamily: MONO, marginTop: 4 }}>#{i + 1} · rank medio {s.rankMedio.toFixed(1)}</div>
+            </div>
+          ))}
         </section>
       )}
     </div>
