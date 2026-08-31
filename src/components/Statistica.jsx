@@ -7,17 +7,27 @@ import { statoRegolaPerPosizione, fattorePeso } from '../engine/dominant-band'
 function nCk(n, k) { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r }
 const ordScore = (p, val) => nCk(val - 1, p) * nCk(90 - val, 5 - p)
 function normMax(map) { let mx = 1e-9; for (const val of map.values()) if (val > mx) mx = val; const o = new Map(); for (const [k, val] of map) o.set(k, val / mx); return o }
-const RULE_FN = { decade: decadeScores, hot: hotScores, cluster: clusterScores, vol: volatilityScores, delay: delayScores, cold: coldHScores }
-const RULE_LABEL = { decade: 'DECADE', hot: 'HOT_V', cluster: 'CLUSTER', vol: 'VERTVOL', delay: 'DELAY_V', cold: 'COLD_H' }
-const ALL_RULES = { decade: true, hot: true, cluster: true, vol: true, delay: true, cold: true }
+// fattori "scarto/sussurro" — spenti di default, non toccano il composito finché non li accendi.
+const freqUltime = (n) => (h) => { const c = new Map(); for (const d of h.slice(-n)) for (const num of d[2]) c.set(num, (c.get(num) || 0) + 1); const m = new Map(); for (let v = 1; v <= 90; v++) m.set(v, c.get(v) || 0); return m }
+const hotH = (h) => freqUltime(10)(h)          // caldi ultime 10 (bocciato, lift 0.55-0.80x)
+const ripetuti = (h) => freqUltime(60)(h)      // "si ripete da mesi" (+2.6%, dentro il rumore)
+// AFFINITA: frequenza storica INTERA del numero in QUELLA posizione — segnale isolato più forte del doc (z=5.75), bocciato end-to-end (t=-4.612, in gran parte DECADE amplificato)
+const affinita = (h, p) => { const c = new Map(); for (const d of h) c.set(d[2][p], (c.get(d[2][p]) || 0) + 1); const m = new Map(); for (let v = 1; v <= 90; v++) m.set(v, c.get(v) || 0); return m }
+// MEAN-REV: premia i numeri LONTANI dalla media recente (inverso di VERTVOL) — bocciato netto nel doc
+const meanRev = (h, p) => { const rec = h.slice(-20).map(d => d[2][p]); const mean = rec.reduce((a, b) => a + b, 0) / (rec.length || 1); const m = new Map(); for (let v = 1; v <= 90; v++) m.set(v, Math.abs(v - mean)); return m }
+const RULE_FN = { decade: decadeScores, hot: hotScores, cluster: clusterScores, vol: volatilityScores, delay: delayScores, cold: coldHScores, hotH: hotH, ripetuti: ripetuti, affinita: affinita, meanRev: meanRev }
+const RULE_LABEL = { decade: 'DECADE', hot: 'HOT_V', cluster: 'CLUSTER', vol: 'VERTVOL', delay: 'DELAY_V', cold: 'COLD_H', hotH: 'HOT_H', ripetuti: 'RIPETUTI', affinita: 'AFFINITÀ', meanRev: 'MEAN-REV' }
+const CORE_KEYS = ['decade', 'hot', 'cluster', 'vol', 'delay', 'cold']
+const SCARTI_KEYS = ['hotH', 'ripetuti', 'affinita', 'meanRev']
+const ALL_RULES = { decade: 1, hot: 1, cluster: 1, vol: 1, delay: 1, cold: 1 }
 
 function customComposite(h, p, rules) {
-  const active = Object.keys(RULE_FN).filter(k => rules[k])
+  const active = Object.keys(RULE_FN).filter(k => (rules[k] || 0) > 0)
   if (active.length === 0) return new Map()
-  const maps = active.map(k => normMax(RULE_FN[k](h, p)))
-  const all = new Set(); maps.forEach(m => { for (const k of m.keys()) all.add(k) })
+  const maps = active.map(k => ({ w: rules[k], m: normMax(RULE_FN[k](h, p)) }))
+  const all = new Set(); maps.forEach(x => { for (const k of x.m.keys()) all.add(k) })
   const out = new Map()
-  for (const n of all) { let s = 0; for (const m of maps) s += m.get(n) || 0; out.set(n, s) }
+  for (const n of all) { let s = 0; for (const x of maps) s += (x.m.get(n) || 0) * x.w; out.set(n, s) }
   return out
 }
 
@@ -137,6 +147,18 @@ function Toggle({ on, set, label, color = v.accent }) {
       padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: MONO, fontSize: 11,
       border: `1px solid ${on ? color : v.borderHi}`, background: on ? color : 'transparent', color: on ? v.bg : v.text
     }}>{label}</button>
+  )
+}
+
+// cursore di PESO per fattore: 0 = spento, fino a 2 = doppio contributo
+function WeightSlider({ label, value, set, color }) {
+  const on = value > 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '48%', minWidth: 128 }}>
+      <span style={{ fontFamily: MONO, fontSize: 10, color: on ? color : v.muted, width: 62 }}>{label}</span>
+      <input type="range" min="0" max="2" step="0.5" value={value} onChange={e => set(parseFloat(e.target.value))} style={{ flex: 1, accentColor: color }} />
+      <span style={{ fontFamily: MONO, fontSize: 10, color: on ? color : v.dim, width: 16 }}>{value}</span>
+    </div>
   )
 }
 
@@ -301,7 +323,11 @@ export default function Statistica({ draws }) {
           <div style={{ opacity: cur.base === 'ordstat' ? 0.4 : 1, marginBottom: 8 }}>
             <div style={{ fontSize: 10, color: v.dim, fontFamily: MONO, marginBottom: 4 }}>regole</div>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-              {Object.keys(RULE_FN).map(k => <Toggle key={k} on={cur.rules[k]} set={x => updRule(k, x)} label={RULE_LABEL[k]} color={v.green} />)}
+              {CORE_KEYS.map(k => <WeightSlider key={k} value={cur.rules[k] || 0} set={x => updRule(k, x)} label={RULE_LABEL[k]} color={v.green} />)}
+            </div>
+            <div style={{ fontSize: 10, color: v.dim, fontFamily: MONO, margin: '8px 0 4px' }}>scarti / sussurri <span style={{ color: v.hot }}>(bocciati o sotto-soglia — spenti di default)</span></div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {SCARTI_KEYS.map(k => <WeightSlider key={k} value={cur.rules[k] || 0} set={x => updRule(k, x)} label={RULE_LABEL[k]} color={v.hot} />)}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
