@@ -134,22 +134,55 @@ function generaMix(draws, sets, quante) {
 
 // ricerca ONESTA per una posizione: prova una griglia, sceglie il meglio in TARATURA,
 // riporta il risultato all'ESAME. Non sceglie sull'esame (sarebbe overfitting).
+// ricerca ONESTA per una posizione: ottimizza i PESI delle regole (coordinate ascent)
+// più base/banda, sceglie sul TARATURA e riporta il risultato all'ESAME.
 function cercaPosizione(draws, baseSet, p, tf, tt, ef, et) {
-  const griglia = []
-  for (const base of ['composito', 'ordstat', 'miscela']) {
-    const alphas = base === 'miscela' ? [0.5, 0.75] : [1]
-    for (const alpha of alphas) for (const banda of [false, true]) {
-      griglia.push({ ...baseSet, base, alpha, banda })
+  const KEYS = [...CORE_KEYS, ...SCARTI_KEYS]
+  const buildCache = (from, to) => {
+    const rows = []
+    for (let t = 1; t < draws.length; t++) {
+      const y = ymOf(draws[t]); if (y < from || y > to) continue
+      const h = draws.slice(0, t)
+      const rm = {}; for (const k of KEYS) rm[k] = normMax(RULE_FN[k](h, p))
+      let omx = 1e-9; for (let v = 1; v <= 90; v++) omx = Math.max(omx, ordScore(p, v))
+      const on = new Map(); for (let v = 1; v <= 90; v++) on.set(v, ordScore(p, v) / omx)
+      rows.push({ rm, on, real: draws[t][2][p], banda: statoRegolaPerPosizione(h) })
     }
+    return rows
   }
-  let best = griglia[0], bestSc = -1
-  for (const g of griglia) {
-    const r = backtestUnaPos(draws, g, p, tf, tt)
-    if (r > bestSc) { bestSc = r; best = g }
+  const trainRows = buildCache(tf, tt), examRows = buildCache(ef, et)
+  const evalRows = (rows, weights, base, alpha, useBanda) => {
+    let hit = 0
+    for (const row of rows) {
+      let sc = new Map()
+      if (base === 'ordstat') { for (let v = 1; v <= 90; v++) sc.set(v, row.on.get(v)) }
+      else {
+        for (let v = 1; v <= 90; v++) { let s = 0; for (const k of KEYS) s += (row.rm[k].get(v) || 0) * (weights[k] || 0); sc.set(v, s) }
+        if (base === 'miscela') { let mx = 1e-9; for (const val of sc.values()) if (val > mx) mx = val; for (let v = 1; v <= 90; v++) sc.set(v, (1 - alpha) * (sc.get(v) / mx) + alpha * row.on.get(v)) }
+      }
+      if (useBanda) { const rk = [...sc.entries()].sort((a, b) => b[1] - a[1]); const w = new Map(); rk.forEach(([num], i) => w.set(num, sc.get(num) * fattorePeso(row.banda[p], i + 1))); sc = w }
+      const t3 = [...sc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0])
+      if (t3.includes(row.real)) hit++
+    }
+    return hit
   }
-  const trainHit = backtestUnaPos(draws, best, p, tf, tt)
-  const examHit = backtestUnaPos(draws, best, p, ef, et)
-  return { best, trainHit, examHit, provati: griglia.length }
+  const weights = {}; KEYS.forEach(k => weights[k] = baseSet.rules[k] != null ? baseSet.rules[k] : (CORE_KEYS.includes(k) ? 1 : 0))
+  const levels = [0, 0.5, 1, 1.5, 2]
+  let banda = false
+  for (let pass = 0; pass < 2; pass++) for (const k of KEYS) {
+    let bestL = weights[k], bestSc = evalRows(trainRows, weights, 'composito', 1, banda)
+    for (const L of levels) { const sc = evalRows(trainRows, { ...weights, [k]: L }, 'composito', 1, banda); if (sc > bestSc) { bestSc = sc; bestL = L } }
+    weights[k] = bestL
+  }
+  banda = evalRows(trainRows, weights, 'composito', 1, true) > evalRows(trainRows, weights, 'composito', 1, false)
+  const compSc = evalRows(trainRows, weights, 'composito', 1, banda)
+  const ordSc = evalRows(trainRows, {}, 'ordstat', 1, false)
+  let best
+  if (compSc >= ordSc) best = { ...baseSet, base: 'composito', alpha: 1, rules: weights, banda }
+  else best = { ...baseSet, base: 'ordstat', alpha: 1, rules: { ...baseSet.rules }, banda: false }
+  const trainHit = best.base === 'ordstat' ? ordSc : compSc
+  const examHit = evalRows(examRows, best.rules, best.base, best.alpha, best.banda)
+  return { best, trainHit, examHit }
 }
 function backtestUnaPos(draws, set, p, fromYM, toYM) {
   let hit3 = 0
@@ -242,7 +275,11 @@ export default function Statistica({ draws }) {
       setSearching(false)
     }, 30)
   }
-  const applicaRicerca = () => { if (ricerca) { const b = ricerca.best; upd('base', b.base); upd('alpha', b.alpha); upd('banda', b.banda) } setRicerca(null) }
+  const applicaRicerca = () => {
+    if (!ricerca) return
+    const b = ricerca.best
+    setSets(a => a.map((s, i) => i === posSel ? { ...s, base: b.base, alpha: b.alpha, banda: b.banda, rules: { ...b.rules } } : s))
+  }
 
   const generaConMix = () => {
     setGenerating(true); setGenRes(null); setSelGen(0)
@@ -389,12 +426,19 @@ export default function Statistica({ draws }) {
             <button onClick={applicaTutte} style={btnSec(false)}>Applica a tutte (non fissate)</button>
           </div>
           {ricerca && ricerca.p === posSel && (
-            <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: v.surface, border: `1px solid ${v.border}` }}>
+            <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: v.surface, border: `1px solid ${v.accent}55` }}>
               <div style={{ fontSize: 11, fontFamily: MONO, color: v.text }}>
-                Migliore in taratura: <strong>{ricerca.best.base}{ricerca.best.base === 'miscela' ? ` α${ricerca.best.alpha}` : ''}{ricerca.best.banda ? '+banda' : ''}</strong>.
-                All'esame: {ricerca.examHit} hit@3 (taratura {ricerca.trainHit}).
+                Migliore in taratura per {LABELS[posSel]}: <strong>{ricerca.best.base}{ricerca.best.base === 'miscela' ? ` α${ricerca.best.alpha}` : ''}{ricerca.best.banda ? ' + banda' : ''}</strong>
               </div>
-              <button onClick={applicaRicerca} style={{ ...btnSec(false), marginTop: 6 }}>Applica a {LABELS[posSel]}</button>
+              {ricerca.best.base !== 'ordstat' && (
+                <div style={{ fontSize: 10, fontFamily: MONO, color: v.muted, marginTop: 4 }}>
+                  pesi: {[...CORE_KEYS, ...SCARTI_KEYS].filter(k => (ricerca.best.rules[k] || 0) > 0).map(k => `${RULE_LABEL[k]} ${ricerca.best.rules[k]}`).join(' · ') || '(tutte a 0)'}
+                </div>
+              )}
+              <div style={{ fontSize: 12, fontFamily: MONO, color: v.accent, marginTop: 6 }}>
+                azzecca (hit@3): <strong>{ricerca.examHit}</strong> all'esame · {ricerca.trainHit} in taratura
+              </div>
+              <button onClick={applicaRicerca} style={{ ...btnSec(false), marginTop: 8 }}>Applica a {LABELS[posSel]} → sposta i cursori</button>
             </div>
           )}
         </div>
