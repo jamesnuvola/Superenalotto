@@ -35,16 +35,18 @@ function customComposite(h, p, rules) {
 }
 
 // classifica (num, rank) per una posizione dato un settaggio
-function rankingPos(h, p, set, bandaStato) {
+function rankingPos(h, p, set, bandaStato, regModel) {
   let base
-  if (set.base === 'ordstat') { base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, ordScore(p, val)) }
-  else {
+  if (set.base === 'regressione' && regModel) {
+    base = scoreReg(h, p, regModel)
+  } else if (set.base === 'ordstat') {
+    base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, ordScore(p, val))
+  } else if (set.base === 'miscela') {
     const comp = customComposite(h, p, set.rules)
-    if (set.base === 'composito') base = comp
-    else {
-      const cn = normMax(comp); let omx = 1e-9; for (let val = 1; val <= 90; val++) omx = Math.max(omx, ordScore(p, val))
-      base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, (1 - set.alpha) * (cn.get(val) || 0) + set.alpha * (ordScore(p, val) / omx))
-    }
+    const cn = normMax(comp); let omx = 1e-9; for (let val = 1; val <= 90; val++) omx = Math.max(omx, ordScore(p, val))
+    base = new Map(); for (let val = 1; val <= 90; val++) base.set(val, (1 - set.alpha) * (cn.get(val) || 0) + set.alpha * (ordScore(p, val) / omx))
+  } else {
+    base = customComposite(h, p, set.rules) // composito (o regressione senza modello ancora pronto)
   }
   if (set.banda && bandaStato) {
     const ranked = [...base.entries()].sort((a, b) => b[1] - a[1])
@@ -57,6 +59,49 @@ function rankingPos(h, p, set, bandaStato) {
   return ranked
 }
 
+// ---- regressione logistica per posizione (opzione di confronto; nel doc bocciata end-to-end) ----
+// feature = le 6 regole core normalizzate. Modello allenato walk-forward sulla storia
+// PRIMA del periodo valutato (taratura ed esame restano fuori campione). È la modalità lenta.
+const REG_FEAT = ['decade', 'hot', 'cluster', 'vol', 'delay', 'cold']
+function featMaps(h, p) { return REG_FEAT.map(k => normMax(RULE_FN[k](h, p))) }
+function scoreReg(h, p, model) {
+  const maps = featMaps(h, p)
+  const out = new Map()
+  for (let v = 1; v <= 90; v++) {
+    let z = model.b; for (let k = 0; k < maps.length; k++) z += model.w[k] * (maps[k].get(v) || 0)
+    out.set(v, 1 / (1 + Math.exp(-z)))
+  }
+  return out
+}
+function trainReg(draws, p, upToIdx) {
+  const WIN = 250, NEG = 10, EPOCHS = 100, LR = 0.3, L2 = 0.4
+  const start = Math.max(400, upToIdx - WIN)
+  const X = [], Y = []
+  for (let t = start; t < upToIdx; t++) {
+    const maps = featMaps(draws.slice(0, t), p)
+    const feat = num => maps.map(m => m.get(num) || 0)
+    const win = draws[t][2][p]
+    X.push(feat(win)); Y.push(1)
+    for (let j = 0; j < NEG; j++) { const num = 1 + Math.floor(Math.random() * 90); if (num !== win) { X.push(feat(num)); Y.push(0) } }
+  }
+  const d = REG_FEAT.length, w = new Array(d).fill(0); let b = 0
+  const nn = X.length || 1
+  for (let e = 0; e < EPOCHS; e++) {
+    const gw = new Array(d).fill(0); let gb = 0
+    for (let i = 0; i < X.length; i++) {
+      let z = b; for (let k = 0; k < d; k++) z += w[k] * X[i][k]
+      const err = 1 / (1 + Math.exp(-z)) - Y[i]
+      for (let k = 0; k < d; k++) gw[k] += err * X[i][k]
+      gb += err
+    }
+    for (let k = 0; k < d; k++) w[k] -= LR * (gw[k] / nn + L2 * w[k])
+    b -= LR * (gb / nn)
+  }
+  return { w, b }
+}
+function startIdxOf(draws, fromYM) { for (let t = 1; t < draws.length; t++) if (ymOf(draws[t]) >= fromYM) return t; return draws.length }
+function trainModels(draws, sets, upToIdx) { return sets.map((s, p) => s.base === 'regressione' ? trainReg(draws, p, upToIdx) : null) }
+
 const ymOf = d => { const [g, m, a] = d[0].split('/').map(Number); return a * 100 + m }
 const needBanda = sets => sets.some(s => s && s.banda)
 
@@ -64,13 +109,14 @@ const needBanda = sets => sets.some(s => s && s.banda)
 function backtestMix(draws, sets, fromYM, toYM) {
   const hit1 = [0, 0, 0, 0, 0, 0], hit3 = [0, 0, 0, 0, 0, 0]; let n = 0
   const usaBanda = needBanda(sets)
+  const regModels = trainModels(draws, sets, startIdxOf(draws, fromYM))
   for (let t = 1; t < draws.length; t++) {
     const y = ymOf(draws[t]); if (y < fromYM || y > toYM) continue
     const h = draws.slice(0, t)
     const banda = usaBanda ? statoRegolaPerPosizione(h) : null
     const real = draws[t][2]
     for (let p = 0; p < 6; p++) {
-      const ranked = rankingPos(h, p, sets[p], banda)
+      const ranked = rankingPos(h, p, sets[p], banda, regModels[p])
       const t3 = ranked.slice(0, 3).map(r => r.num)
       if (t3[0] === real[p]) hit1[p]++
       if (t3.includes(real[p])) hit3[p]++
@@ -82,10 +128,10 @@ function backtestMix(draws, sets, fromYM, toYM) {
 const somma = a => a.reduce((x, y) => x + y, 0)
 
 // sestina del mix (una per estrazione) e conteggio premi reali (per insieme, col jolly)
-function sestinaMix(h, sets, banda) {
+function sestinaMix(h, sets, banda, regModels) {
   const s = []; let prev = 0
   for (let p = 0; p < 6; p++) {
-    const ranked = rankingPos(h, p, sets[p], banda)
+    const ranked = rankingPos(h, p, sets[p], banda, regModels ? regModels[p] : null)
     for (const r of ranked) { if (r.num > prev && !s.includes(r.num)) { s.push(r.num); prev = r.num; break } }
   }
   return s.length === 6 ? s : null
@@ -93,11 +139,12 @@ function sestinaMix(h, sets, banda) {
 function premiMix(draws, sets, fromYM, toYM) {
   const t = { '2': 0, '3': 0, '4': 0, '5': 0, '5+J': 0, '6': 0 }
   const usaBanda = needBanda(sets)
+  const regModels = trainModels(draws, sets, startIdxOf(draws, fromYM))
   for (let i = 1; i < draws.length; i++) {
     const y = ymOf(draws[i]); if (y < fromYM || y > toYM) continue
     const h = draws.slice(0, i)
     const banda = usaBanda ? statoRegolaPerPosizione(h) : null
-    const g = sestinaMix(h, sets, banda); if (!g) continue
+    const g = sestinaMix(h, sets, banda, regModels); if (!g) continue
     const set = new Set(draws[i][2]); let m = 0; g.forEach(n => { if (set.has(n)) m++ })
     if (m === 5) { const np = g.filter(n => !set.has(n)); if (np.length && np[0] === draws[i][3]) { t['5+J']++; continue } }
     if (m >= 2) t[String(m)]++
@@ -108,7 +155,8 @@ function premiMix(draws, sets, fromYM, toYM) {
 // genera N sestine col mix, coi rank REALISTICI per posizione (come la SERIA), non tutti a rank 1
 function generaMix(draws, sets, quante) {
   const banda = needBanda(sets) ? statoRegolaPerPosizione(draws) : null
-  const perPos = [0, 1, 2, 3, 4, 5].map(p => rankingPos(draws, p, sets[p], banda))
+  const regModels = trainModels(draws, sets, draws.length)
+  const perPos = [0, 1, 2, 3, 4, 5].map(p => rankingPos(draws, p, sets[p], banda, regModels[p]))
   const poolSize = perPos.map(rk => rk.length)
   const rankOf = perPos.map(rk => { const m = new Map(); rk.forEach(r => m.set(r.num, r.rank)); return m })
   const target = [0, 1, 2, 3, 4, 5].map(p => RANK_BANDS_BY_POSITION[p].mediana)
@@ -392,7 +440,7 @@ export default function Statistica({ draws }) {
           </div>
           <div style={{ fontSize: 11, color: v.muted, fontFamily: MONO, marginBottom: 6 }}>ranking</div>
           <div style={{ display: 'flex', gap: 6, marginBottom: cur.base === 'miscela' ? 10 : 8 }}>
-            {[['composito', 'Composito'], ['ordstat', 'Ordine'], ['miscela', 'Miscela']].map(([k, l]) => (
+            {[['composito', 'Composito'], ['ordstat', 'Ordine'], ['miscela', 'Miscela'], ['regressione', 'Regr.']].map(([k, l]) => (
               <Toggle key={k} on={cur.base === k} set={() => upd('base', k)} label={l} />
             ))}
           </div>
@@ -402,7 +450,7 @@ export default function Statistica({ draws }) {
               <input type="range" min="0" max="1" step="0.05" value={cur.alpha} onChange={e => upd('alpha', parseFloat(e.target.value))} style={{ width: '100%' }} />
             </div>
           )}
-          <div style={{ opacity: cur.base === 'ordstat' ? 0.4 : 1, marginBottom: 8 }}>
+          <div style={{ opacity: (cur.base === 'ordstat' || cur.base === 'regressione') ? 0.4 : 1, marginBottom: 8 }}>
             <div style={{ fontSize: 10, color: v.dim, fontFamily: MONO, marginBottom: 4 }}>regole</div>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               {CORE_KEYS.map(k => <WeightSlider key={k} value={cur.rules[k] || 0} set={x => updRule(k, x)} label={RULE_LABEL[k]} color={v.green} />)}
