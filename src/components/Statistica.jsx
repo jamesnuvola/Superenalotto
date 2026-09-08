@@ -225,27 +225,34 @@ function trovaAnalogia(draws, W, tolExact, propPct) {
       let ok = true; for (let k = 0; k < W; k++) { if (!(matchExact(cand[k], cur[k], tolExact) || matchProp(cand[k], cur[k], band))) { ok = false; break } }
       if (!ok) continue
       const nextDelta = allD[i + W][idx], lastDelta = cand[W - 1]
+      // i delta sono sempre positivi (posizioni ordinate): "opposto" (segno invertito) non può
+      // mai scattare. L'equivalente reale per una quantità sempre positiva è la GRANDEZZA:
+      // un salto a un delta molto più piccolo o molto più grande di quello visto ora.
       let cls
       if (matchExact(nextDelta, lastDelta, tolExact) || matchProp(nextDelta, lastDelta, band)) cls = 'simile'
-      else if (Math.sign(nextDelta) !== 0 && Math.sign(lastDelta) !== 0 && Math.sign(nextDelta) === -Math.sign(lastDelta)) cls = 'opposto'
-      else cls = 'diverso'
+      else if (nextDelta < lastDelta) cls = 'piu_piccolo'
+      else cls = 'piu_grande'
       matches.push({ data: draws[i + W][0], nextDelta, cls })
     }
     const n = matches.length
     const p = c => n ? matches.filter(m => m.cls === c).length / n : 0
-    const simile = p('simile'), opposto = p('opposto'), diverso = p('diverso')
+    const simile = p('simile'), piuPiccolo = p('piu_piccolo'), piuGrande = p('piu_grande'), diverso = piuPiccolo + piuGrande
     let alternanza = true; for (let k = 1; k < W; k++) if (!(Math.sign(cur[k]) !== 0 && Math.sign(cur[k - 1]) !== 0 && Math.sign(cur[k]) === -Math.sign(cur[k - 1]))) { alternanza = false; break }
     let trendUp = true, trendDown = true; for (let k = 1; k < W; k++) { if (!(cur[k] > cur[k - 1])) trendUp = false; if (!(cur[k] < cur[k - 1])) trendDown = false }
     const trend = trendUp ? 'su' : trendDown ? 'giù' : null
     const last = cur[W - 1]
     let verdetto, target = null
     if (n < 5) verdetto = `campione troppo piccolo (${n} casi) per dire qualcosa`
-    else if (diverso > 0.5 && diverso > simile + 0.15) { verdetto = 'quasi sempre diverso → aspettati una forma diversa dai casi trovati'; target = median(matches.filter(m => m.cls === 'diverso').map(m => m.nextDelta)) }
-    else if (simile > 0.5 && simile > diverso + 0.15) { verdetto = 'spesso simile → segui la distribuzione dei casi trovati'; target = last }
+    else if (diverso > 0.5 && diverso > simile + 0.15) {
+      const sub = piuGrande >= piuPiccolo ? 'piu_grande' : 'piu_piccolo'
+      target = median(matches.filter(m => m.cls === sub).map(m => m.nextDelta))
+      verdetto = `quasi sempre diverso, e soprattutto ${sub === 'piu_grande' ? 'più grande' : 'più piccolo'} → aspettati un delta ${sub === 'piu_grande' ? 'più ampio' : 'più stretto'} di quello visto ora`
+    }
+    else if (simile > 0.5 && simile > diverso + 0.15) { verdetto = 'spesso simile → segui la distribuzione dei casi trovati (verifica con la sezione Pattern sopra: dist.1 spicca davvero su dist.2/3/5?)'; target = last }
     else if (alternanza) { verdetto = 'la finestra recente alterna → previsione: il segno opposto all\'ultimo delta'; target = Math.max(1, cur[0]) }
     else if (trend) { verdetto = `la finestra recente segue un trend verso ${trend === 'su' ? "l'alto" : 'il basso'} → previsione: continua nella stessa direzione`; target = Math.max(1, Math.min(89, last + (last - cur[W - 2]))) }
     else verdetto = 'metà e metà, senza alternanza né trend chiaro nella finestra recente — nessuna indicazione'
-    return { label, n, simile, opposto, diverso, alternanza, trend, cur, verdetto, target, esempi: matches.slice(-5), serie: allD.slice(Math.max(0, N - 30), N).map(d => d[idx]) }
+    return { label, n, simile, piuPiccolo, piuGrande, diverso, alternanza, trend, cur, verdetto, target, esempi: matches.slice(-5), serie: allD.slice(Math.max(0, N - 30), N).map(d => d[idx]) }
   })
   return rows
 }
@@ -830,7 +837,7 @@ export default function Statistica({ draws }) {
                   <span style={{ color: v.accent }}>{r.label}</span> <span style={{ color: v.dim }}>· finestra attuale Δ{r.cur.join(',Δ')}</span>
                 </div>
                 <div style={{ fontFamily: MONO, fontSize: 10.5, color: v.text, marginTop: 2 }}>
-                  {r.n} casi trovati — simile {(100 * r.simile).toFixed(0)}% · opposto {(100 * r.opposto).toFixed(0)}% · diverso {(100 * r.diverso).toFixed(0)}%
+                  {r.n} casi trovati — simile {(100 * r.simile).toFixed(0)}% · diverso {(100 * r.diverso).toFixed(0)}% (più piccolo {(100 * r.piuPiccolo).toFixed(0)}% · più grande {(100 * r.piuGrande).toFixed(0)}%)
                 </div>
                 <div style={{ fontSize: 11, color: v.gold, fontFamily: MONO, marginTop: 3 }}>{r.verdetto}</div>
                 {r.esempi.length > 0 && (
