@@ -141,6 +141,11 @@ function inverseAnalysis(draws, limit) {
     const currentRanks = objective(features, target, [1, 1, 1, 1, 1, 1]).ranks
     const optimizedRanks = result.ranks
     const distribution = rankDistribution(optimizedRanks)
+    const targetDetails = target.map((number, p) => ({
+      position: p, number, rank: optimizedRanks[p], baseRank: currentRanks[p],
+      score: RULES.reduce((sum, rule, r) => sum + (features[p][r].get(number) || 0) * result.weights[r], 0),
+      values: RULES.map((rule, r) => features[p][r].get(number) || 0)
+    }))
     rows.push({
       index: t,
       date: draws[t][0],
@@ -155,6 +160,7 @@ function inverseAnalysis(draws, limit) {
       avgRank: optimizedRanks.reduce((a, b) => a + b, 0) / optimizedRanks.length,
       rankSum: optimizedRanks.reduce((a, b) => a + b, 0),
       distribution,
+      targetDetails,
       fingerprint: fingerprint(result.weights)
     })
   }
@@ -198,8 +204,33 @@ function inverseAnalysis(draws, limit) {
     return acc
   }, { r1: 0, r2_3: 0, r4_5: 0, r6_10: 0, r11_20: 0, r21p: 0 })
 
+  const bands = [
+    { key: 'top3', label: 'Rank 1–3', test: r => r <= 3 },
+    { key: 'r4_10', label: 'Rank 4–10', test: r => r >= 4 && r <= 10 },
+    { key: 'r11_20', label: 'Rank 11–20', test: r => r >= 11 && r <= 20 },
+    { key: 'r21p', label: 'Rank 21+', test: r => r > 20 }
+  ]
+  const bandStats = bands.map(band => {
+    const items = rows.flatMap(row => row.targetDetails.filter(d => band.test(d.rank)))
+    const means = RULES.map((rule, r) => items.length ? items.reduce((sum, d) => sum + d.values[r], 0) / items.length : 0)
+    return { ...band, count: items.length, pct: pct(items.length, totalNumbers), means }
+  })
+  const top3vs4_10 = RULES.map((rule, r) => {
+    const a = rows.flatMap(row => row.targetDetails.filter(d => d.rank <= 3).map(d => d.values[r]))
+    const b = rows.flatMap(row => row.targetDetails.filter(d => d.rank >= 4 && d.rank <= 10).map(d => d.values[r]))
+    const meanA = a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0
+    const meanB = b.length ? b.reduce((x, y) => x + y, 0) / b.length : 0
+    return { ...rule, top3Mean: meanA, top10Mean: meanB, delta: meanA - meanB, absDelta: Math.abs(meanA - meanB), nTop3: a.length, nTop10: b.length }
+  }).sort((a, b) => b.absDelta - a.absDelta)
+  const top10NotTop3 = rows.flatMap(row => row.targetDetails.filter(d => d.rank >= 4 && d.rank <= 10).map(d => ({ ...d, date: row.date }))).sort((a, b) => a.rank - b.rank || a.baseRank - b.baseRank)
+  const positionDiagnostics = POSITION_LABELS.map((label, p) => {
+    const items = rows.map(row => row.targetDetails[p])
+    const a = items.filter(d => d.rank <= 3), b = items.filter(d => d.rank >= 4 && d.rank <= 10)
+    return { label, top3Count: a.length, top10Count: b.length, top3MeanRank: a.length ? a.reduce((s,d)=>s+d.rank,0)/a.length : 0, top10MeanRank: b.length ? b.reduce((s,d)=>s+d.rank,0)/b.length : 0 }
+  })
+
   return {
-    rows, exactRows, recurring, ruleStats, near,
+    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics,
     metrics: {
       totalNumbers,
       top1Total, top3Total, top5Total, top10Total,
@@ -351,6 +382,26 @@ export default function Andamento({ draws }) {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Diagnosi: cosa distingue Top 3 da Rank 4–10?</h3>
+              <p style={styles.caption}>Confronta i valori normalizzati delle sei variabili sui numeri vincenti che l'ottimizzazione porta in Top 3 rispetto a quelli che restano in Rank 4–10. Serve a capire se manca un criterio di ordinamento, senza modificare il motore.</p>
+              <div style={{ overflowX: 'auto' }}><table style={ui.table}>
+                <thead><tr><th>Fascia</th><th>N.</th><th>%</th>{RULES.map(r=><th key={r.key}>{r.label}</th>)}</tr></thead>
+                <tbody>{analysis.bandStats.map(b=><tr key={b.key}><td><b>{b.label}</b></td><td>{b.count}</td><td>{b.pct}</td>{b.means.map((v,i)=><td key={RULES[i].key}>{v.toFixed(3)}</td>)}</tr>)}</tbody>
+              </table></div>
+              <div style={{ marginTop: 14, overflowX: 'auto' }}><table style={ui.table}>
+                <thead><tr><th>Variabile</th><th>Media Top 3</th><th>Media Rank 4–10</th><th>Δ</th><th>Campioni</th></tr></thead>
+                <tbody>{analysis.top3vs4_10.map(r=><tr key={r.key}><td><b>{r.label}</b></td><td>{r.top3Mean.toFixed(3)}</td><td>{r.top10Mean.toFixed(3)}</td><td>{r.delta>=0?'+':''}{r.delta.toFixed(3)}</td><td>{r.nTop3} / {r.nTop10}</td></tr>)}</tbody>
+              </table></div>
+              <p style={styles.caption}>Δ positivo = valore medio più alto nei Top 3; Δ negativo = valore medio più alto nei Rank 4–10. È un confronto descrittivo, non causale.</p>
+              <div style={{ marginTop: 14 }}><h3 style={ui.h3}>Top 10 ma non Top 3 — casi da studiare</h3>
+                <div style={{ overflowX: 'auto' }}><table style={ui.table}><thead><tr><th>Data</th><th>Pos.</th><th>Numero</th><th>Rank</th><th>Base</th>{RULES.map(r=><th key={r.key}>{r.label}</th>)}</tr></thead>
+                <tbody>{analysis.top10NotTop3.slice(0,30).map((d,i)=><tr key={`${d.date}-${d.position}-${i}`}><td>{d.date}</td><td>P{d.position+1}</td><td><b>{d.number}</b></td><td>{d.rank}</td><td>{d.baseRank}</td>{d.values.map((v,j)=><td key={RULES[j].key}>{v.toFixed(3)}</td>)}</tr>)}</tbody></table></div>
+                <p style={styles.caption}>I primi 30 casi in cui il numero vincente è nella Top 10 ma non nella Top 3. Sono i casi più utili per cercare il criterio mancante di ordinamento.</p>
+              </div>
+              <div style={{ marginTop: 14, overflowX: 'auto' }}><table style={ui.table}><thead><tr><th>Posizione</th><th>Top 3</th><th>Rank 4–10</th><th>Rank medio Top 3</th><th>Rank medio 4–10</th></tr></thead><tbody>{analysis.positionDiagnostics.map(p=><tr key={p.label}><td><b>{p.label}</b></td><td>{p.top3Count}</td><td>{p.top10Count}</td><td>{p.top3MeanRank.toFixed(2)}</td><td>{p.top10MeanRank.toFixed(2)}</td></tr>)}</tbody></table></div>
             </div>
 
             <div style={{ marginTop: 18 }}>
