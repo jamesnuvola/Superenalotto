@@ -1,0 +1,374 @@
+import { useMemo, useState } from 'react'
+import { P, styles } from '../utils/constants'
+import PosizioniChart, { historicalSeries } from './PosizioniChart'
+import {
+  hotScores,
+  delayScores,
+  decadeScores,
+  clusterScores,
+  volatilityScores,
+  coldHScores,
+  POSITION_LABELS
+} from '../engine/scoring'
+
+const RULES = [
+  { key: 'DECADE', label: 'DECADE', fn: decadeScores },
+  { key: 'HOT_V', label: 'HOT_V', fn: hotScores },
+  { key: 'CLUSTER_V', label: 'CLUSTER_V', fn: clusterScores },
+  { key: 'DELAY_V', label: 'DELAY_V', fn: delayScores },
+  { key: 'VERTVOL', label: 'VERTVOL', fn: volatilityScores },
+  { key: 'COLD_H', label: 'COLD_H', fn: coldHScores }
+]
+
+const WEIGHTS = [0, 0.5, 1, 1.5, 2, 3]
+const MAX_ANALYSIS = 240
+
+function normalizeMap(map) {
+  const values = [...map.values()]
+  const max = Math.max(...values, 1e-9)
+  const out = new Map()
+  for (const [k, v] of map.entries()) out.set(k, v / max)
+  return out
+}
+
+function buildFeatures(history) {
+  return POSITION_LABELS.map((_, p) => RULES.map(rule => normalizeMap(rule.fn(history, p))))
+}
+
+function rankWithWeights(features, position, number, weights) {
+  const candidates = new Set()
+  for (let r = 0; r < RULES.length; r++) {
+    for (const n of features[position][r].keys()) candidates.add(n)
+  }
+
+  const scored = []
+  for (const n of candidates) {
+    let score = 0
+    for (let r = 0; r < RULES.length; r++) score += (features[position][r].get(n) || 0) * weights[r]
+    scored.push([n, score])
+  }
+  scored.sort((a, b) => b[1] - a[1] || a[0] - b[0])
+  const idx = scored.findIndex(([n]) => n === number)
+  return idx >= 0 ? idx + 1 : scored.length + 1
+}
+
+function objective(features, target, weights) {
+  const ranks = []
+  let exact = 0
+  let reciprocal = 0
+  for (let p = 0; p < 6; p++) {
+    const rank = rankWithWeights(features, p, target[p], weights)
+    ranks.push(rank)
+    if (rank === 1) exact++
+    reciprocal += 1 / rank
+  }
+  // Priorità assoluta alla sestina completa, poi al numero di posizioni in top-1,
+  // poi al rank medio. In questo modo il motore cerca davvero una spiegazione 6/6.
+  const score = exact * 100000 + reciprocal * 1000 - ranks.reduce((a, b) => a + b, 0)
+  return { score, exact, ranks, reciprocal }
+}
+
+function optimizeWeights(features, target) {
+  let weights = [1, 1, 1, 1, 1, 1]
+  let best = objective(features, target, weights)
+
+  // Coordinate descent: per ogni regola proviamo una piccola griglia di pesi.
+  // Ripetiamo due passaggi per permettere alle variabili di interagire.
+  for (let pass = 0; pass < 2; pass++) {
+    let changed = false
+    for (let r = 0; r < RULES.length; r++) {
+      let localBest = best
+      let localWeight = weights[r]
+      for (const w of WEIGHTS) {
+        const candidate = [...weights]
+        candidate[r] = w
+        const result = objective(features, target, candidate)
+        if (result.score > localBest.score) {
+          localBest = result
+          localWeight = w
+        }
+      }
+      if (localWeight !== weights[r]) {
+        weights[r] = localWeight
+        best = localBest
+        changed = true
+      }
+    }
+    if (!changed) break
+  }
+
+  return { weights, ...objective(features, target, weights) }
+}
+
+function fingerprint(weights) {
+  return weights.map(w => w.toString()).join('|')
+}
+
+function pct(n, d) {
+  return d ? `${((n / d) * 100).toFixed(1)}%` : '—'
+}
+
+function fmtDate(date) {
+  return date || '—'
+}
+
+function inverseAnalysis(draws, limit) {
+  const start = Math.max(1, draws.length - limit)
+  const rows = []
+
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const features = buildFeatures(history)
+    const result = optimizeWeights(features, target)
+    const currentRanks = objective(features, target, [1, 1, 1, 1, 1, 1]).ranks
+    rows.push({
+      index: t,
+      date: draws[t][0],
+      target,
+      weights: result.weights,
+      exact: result.exact,
+      ranks: result.ranks,
+      baseRanks: currentRanks,
+      rankSum: result.ranks.reduce((a, b) => a + b, 0),
+      fingerprint: fingerprint(result.weights)
+    })
+  }
+
+  const exactRows = rows.filter(r => r.exact === 6)
+  const fingerprints = new Map()
+  for (const row of exactRows) {
+    if (!fingerprints.has(row.fingerprint)) fingerprints.set(row.fingerprint, [])
+    fingerprints.get(row.fingerprint).push(row)
+  }
+
+  const recurring = [...fingerprints.entries()]
+    .map(([fp, occurrences]) => ({ fp, occurrences, weights: occurrences[0].weights }))
+    .sort((a, b) => b.occurrences.length - a.occurrences.length)
+
+  const ruleStats = RULES.map((rule, r) => {
+    const active = rows.filter(x => x.weights[r] > 0).length
+    const activeExact = exactRows.filter(x => x.weights[r] > 0).length
+    const weightSum = rows.reduce((s, x) => s + x.weights[r], 0)
+    return {
+      ...rule,
+      active,
+      activeExact,
+      activePct: pct(active, rows.length),
+      exactPct: pct(activeExact, exactRows.length),
+      avgWeight: rows.length ? weightSum / rows.length : 0
+    }
+  })
+
+  // Cerca anche gli "quasi perfetti": sono utili per capire quali variabili
+  // avvicinano maggiormente la vincente quando il 6/6 non è possibile.
+  const near = [...rows].sort((a, b) => b.exact - a.exact || a.rankSum - b.rankSum).slice(0, 12)
+
+  return { rows, exactRows, recurring, ruleStats, near }
+}
+
+const ui = {
+  input: { background: '#07101a', color: '#cfe2f1', border: '1px solid #18324a', borderRadius: 6, padding: '7px 9px' },
+  button: { background: '#0b2234', color: '#bfeaff', border: '1px solid #1c5574', borderRadius: 6, padding: '8px 12px', cursor: 'pointer', fontWeight: 700 },
+  h3: { fontSize: 14, color: '#8fa9bd', fontWeight: 600, margin: 0 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 12, color: '#b9cddd' }
+}
+
+function SmallStat({ label, value, sub }) {
+  return (
+    <div style={{ ...styles.card, minWidth: 150, flex: 1 }}>
+      <div style={{ color: '#6f91ad', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, marginTop: 5 }}>{value}</div>
+      {sub && <div style={{ color: '#7290a8', fontSize: 12, marginTop: 3 }}>{sub}</div>}
+    </div>
+  )
+}
+
+function Weights({ weights }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+      {RULES.map((r, i) => (
+        <span key={r.key} style={{
+          border: '1px solid #18324a', borderRadius: 999, padding: '4px 8px',
+          fontSize: 11, color: weights[i] > 0 ? '#c7d9e8' : '#59738b',
+          background: weights[i] > 0 ? '#0b1724' : '#07101a'
+        }}>
+          {r.label} {weights[i]}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+export default function Andamento({ draws }) {
+  const hs = useMemo(() => historicalSeries(draws, 15), [draws])
+  const [limit, setLimit] = useState(180)
+  const [analysis, setAnalysis] = useState(null)
+  const [running, setRunning] = useState(false)
+
+  const columns = hs.dates.map(d => ({ label: d }))
+  const lines = POSITION_LABELS.map((label, p) => ({
+    label, color: P[p], values: hs.posValues[p], ranks: hs.posRanks[p]
+  }))
+
+  const runAnalysis = () => {
+    setRunning(true)
+    // Lasciamo al browser il tempo di aggiornare il bottone prima del calcolo.
+    setTimeout(() => {
+      const result = inverseAnalysis(draws, Math.min(MAX_ANALYSIS, Number(limit) || 180))
+      setAnalysis(result)
+      setRunning(false)
+    }, 20)
+  }
+
+  const best = analysis?.near?.[0]
+  const current = analysis?.rows?.[analysis.rows.length - 1]
+  const exactCount = analysis?.exactRows?.length || 0
+  const analyzedCount = analysis?.rows?.length || 0
+
+  return (
+    <div>
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Andamento — ultime {hs.dates.length} estrazioni</h2>
+        <p style={styles.caption}>
+          Una linea tratteggiata per posizione (P1→P6, dal numero più basso al più alto in ogni
+          estrazione). Sopra ogni punto il numero estratto, sotto il suo rank. Il Jolly è a rombi.
+        </p>
+        <PosizioniChart columns={columns} lines={lines} jolly={{ values: hs.jollyValues }} />
+      </section>
+
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Analisi inversa della vincente</h2>
+        <p style={styles.caption}>
+          Per ogni estrazione storica usa esclusivamente lo storico disponibile prima di quella data.
+          Cerca quindi i pesi delle 6 regole che avrebbero portato i sei numeri reali al rank 1.
+          È un'analisi retrospettiva: non è una previsione e non usa dati futuri.
+        </p>
+
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', margin: '14px 0' }}>
+          <label style={{ color: '#8ba5ba', fontSize: 13 }}>Transizioni da analizzare</label>
+          <select value={limit} onChange={e => setLimit(e.target.value)} style={{ ...ui.input, width: 100 }}>
+            {[60, 120, 180, 240].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <button onClick={runAnalysis} disabled={running} style={ui.button}>
+            {running ? 'Analisi in corso…' : 'Avvia analisi'}
+          </button>
+          <span style={{ color: '#5e7b92', fontSize: 12 }}>Massimo {MAX_ANALYSIS}; il calcolo può richiedere qualche secondo.</span>
+        </div>
+
+        {!analysis && (
+          <div style={{ ...styles.card, color: '#7893a9', lineHeight: 1.6 }}>
+            Questa sezione non modifica il motore attuale. Serve a scoprire, guardando indietro,
+            quali combinazioni di DECADE, HOT_V, CLUSTER_V, DELAY_V, VERTVOL e COLD_H hanno spiegato meglio
+            la sestina successiva e se le stesse combinazioni si sono ripetute.
+          </div>
+        )}
+
+        {analysis && (
+          <>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <SmallStat label="Transizioni" value={analyzedCount} sub="T-1 → T" />
+              <SmallStat label="6/6 esatti" value={exactCount} sub={pct(exactCount, analyzedCount)} />
+              <SmallStat label="Miglior caso" value={best ? `${best.exact}/6` : '—'} sub={best ? `${fmtDate(best.date)} · rank ${best.ranks.join(' · ')}` : ''} />
+              <SmallStat label="Ultima transizione" value={current ? `${current.exact}/6` : '—'} sub={current ? `${fmtDate(current.date)} · ottimizzato` : ''} />
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <h3 style={ui.h3}>Quali variabili vengono scelte?</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={ui.table}>
+                  <thead>
+                    <tr>
+                      <th>Regola</th><th>Attiva</th><th>Su 6/6</th><th>Frequenza</th><th>Peso medio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.ruleStats
+                      .sort((a, b) => b.activeExact - a.activeExact || b.active - a.active)
+                      .map(r => (
+                        <tr key={r.key}>
+                          <td><b>{r.label}</b></td>
+                          <td>{r.active}/{analyzedCount}</td>
+                          <td>{r.activeExact}/{exactCount || 0}</td>
+                          <td>{r.activePct}</td>
+                          <td>{r.avgWeight.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={styles.caption}>
+                “Attiva” significa peso &gt; 0 nel setting ottimizzato. Non significa che la regola sia causalmente
+                responsabile della vincente: serve a misurare quali variabili vengono selezionate più spesso dal fitting.
+              </p>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Configurazioni 6/6 ricorrenti</h3>
+              {analysis.recurring.length === 0 ? (
+                <div style={{ ...styles.card, color: '#7e96a9' }}>
+                  Nessun 6/6 trovato nelle ultime {analyzedCount} transizioni con questa griglia di pesi.
+                  I casi quasi perfetti sotto sono comunque utili per capire come correggere i rank.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {analysis.recurring.slice(0, 10).map((r, i) => (
+                    <div key={r.fp} style={styles.card}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        <b>Configurazione #{i + 1} — {r.occurrences.length} occorrenze</b>
+                        <span style={{ color: '#7691a7', fontSize: 12 }}>
+                          {r.occurrences.map(o => o.date).join(' · ')}
+                        </span>
+                      </div>
+                      <Weights weights={r.weights} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Migliori transizioni: dove il rank può essere migliorato</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={ui.table}>
+                  <thead>
+                    <tr><th>Data</th><th>Vincente</th><th>Rank ottimizzato</th><th>6/6?</th><th>Setting</th></tr>
+                  </thead>
+                  <tbody>
+                    {analysis.near.map(row => (
+                      <tr key={row.index}>
+                        <td>{row.date}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{row.target.join(' · ')}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{row.ranks.join(' · ')}</td>
+                        <td><b>{row.exact}/6</b></td>
+                        <td><Weights weights={row.weights} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Lettura dell'ultima transizione analizzata</h3>
+              {current && (
+                <div style={styles.card}>
+                  <div style={{ color: '#9db5c8', fontSize: 13 }}>
+                    Per <b>{current.date}</b>, usando solo le estrazioni precedenti, la sestina reale era:
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, margin: '8px 0' }}>{current.target.join(' · ')}</div>
+                  <div style={{ color: '#89a3b8', fontSize: 13 }}>Rank ottimizzati: <b>{current.ranks.join(' · ')}</b> → <b>{current.exact}/6</b> al rank 1.</div>
+                  <Weights weights={current.weights} />
+                  <div style={{ marginTop: 10, color: '#657f95', fontSize: 12 }}>
+                    Il confronto con i rank base è {current.baseRanks.join(' · ')}. Se l'ottimizzazione li abbassa in modo sistematico,
+                    il passo successivo può essere una ricalibrazione delle funzioni/rank, non semplicemente dei pesi.
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  )
+}
