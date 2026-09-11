@@ -117,6 +117,108 @@ function optimizeWeights(features, target) {
   return { weights, ...objective(features, target, weights) }
 }
 
+function transformFeatures(features, transforms) {
+  return features.map(position => position.map((map, r) => {
+    const fn = transforms[r] || (x => x)
+    const out = new Map()
+    for (const [n, v] of map.entries()) out.set(n, Math.max(0, fn(v)))
+    return out
+  }))
+}
+
+function optimizeRestricted(features, target, allowed, fixed = {}) {
+  let weights = RULES.map((_, r) => Object.prototype.hasOwnProperty.call(fixed, r) ? fixed[r] : (allowed.includes(r) ? 1 : 0))
+  let best = objective(features, target, weights)
+  for (let pass = 0; pass < 2; pass++) {
+    let changed = false
+    for (const r of allowed) {
+      let localBest = best
+      let localWeight = weights[r]
+      for (const w of WEIGHTS) {
+        const candidate = [...weights]
+        candidate[r] = w
+        const result = objective(features, target, candidate)
+        if (result.score > localBest.score) { localBest = result; localWeight = w }
+      }
+      if (localWeight !== weights[r]) { weights[r] = localWeight; best = localBest; changed = true }
+    }
+    if (!changed) break
+  }
+  return { weights, ...objective(features, target, weights) }
+}
+
+function aggregateVariant(rows, key, rankField = 'ranks') {
+  const ranks = rows.flatMap(r => r[key]?.[rankField] || [])
+  const n = ranks.length
+  return {
+    key,
+    rank1: ranks.filter(r => r === 1).length,
+    top3: ranks.filter(r => r <= 3).length,
+    top5: ranks.filter(r => r <= 5).length,
+    top10: ranks.filter(r => r <= 10).length,
+    avgRank: n ? ranks.reduce((a,b)=>a+b,0)/n : 0,
+    total: n
+  }
+}
+
+function runRankingTests(draws, limit) {
+  const start = Math.max(1, draws.length - limit)
+  const rows = []
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const features = buildFeatures(history)
+    const baseline = optimizeWeights(features, target)
+
+    // A: fine-ranking puro. Elimina VERTVOL e COLD_H dalla fase di ordinamento.
+    const fine = optimizeRestricted(features, target, [0,1,2,3], {4:0, 5:0})
+
+    // B: sensibilità a COLD_H. Manteniamo il setting ottimizzato di base e
+    // cambiamo soltanto l'impatto di COLD_H, così il test non viene vanificato
+    // dal ri-ottimizzatore che potrebbe compensare il moltiplicatore.
+    const coldVariants = {}
+    for (const factor of [1, 0.75, 0.5, 0.25, 0]) {
+      const w = [...baseline.weights]
+      w[5] *= factor
+      coldVariants[`cold_${factor}`] = { ranks: objective(features, target, w).ranks, weights: w }
+    }
+
+    // C: non linearità su HOT_V e DELAY_V. Ottimizziamo i pesi sulla versione
+    // trasformata per vedere se valori alti meritano una spinta più che lineare.
+    const linear = transformFeatures(features, {1:x=>x, 3:x=>x})
+    const hot2 = transformFeatures(features, {1:x=>x*x, 3:x=>x})
+    const delay2 = transformFeatures(features, {1:x=>x, 3:x=>x*x})
+    const hotSqrt = transformFeatures(features, {1:x=>Math.sqrt(x), 3:x=>x})
+    const delaySqrt = transformFeatures(features, {1:x=>x, 3:x=>Math.sqrt(x)})
+    const nonlinear = {
+      hot2: optimizeWeights(hot2, target),
+      delay2: optimizeWeights(delay2, target),
+      hotSqrt: optimizeWeights(hotSqrt, target),
+      delaySqrt: optimizeWeights(delaySqrt, target),
+      linear: baseline
+    }
+
+    rows.push({ index:t, date:draws[t][0], baseline, fine, coldVariants, nonlinear })
+  }
+
+  const variants = [
+    { key:'baseline', label:'ATTUALE', get:r=>r.baseline },
+    { key:'fine', label:'A · FINE RANKER', get:r=>r.fine },
+    ...[1,0.75,0.5,0.25,0].map(f => ({ key:`cold_${f}`, label:`B · COLD_H × ${f}`, get:r=>r.coldVariants[`cold_${f}`] })),
+    { key:'hot2', label:'C · HOT_V²', get:r=>r.nonlinear.hot2 },
+    { key:'delay2', label:'C · DELAY_V²', get:r=>r.nonlinear.delay2 },
+    { key:'hotSqrt', label:'C · √HOT_V', get:r=>r.nonlinear.hotSqrt },
+    { key:'delaySqrt', label:'C · √DELAY_V', get:r=>r.nonlinear.delaySqrt }
+  ]
+  const metrics = variants.map(v => {
+    const ranks = rows.flatMap(r => v.get(r).ranks)
+    const n = ranks.length
+    return { ...v, rank1:ranks.filter(x=>x===1).length, top3:ranks.filter(x=>x<=3).length, top5:ranks.filter(x=>x<=5).length, top10:ranks.filter(x=>x<=10).length, avgRank:n?ranks.reduce((a,b)=>a+b,0)/n:0, total:n }
+  })
+  const baseline = metrics[0]
+  return { rows, metrics, baseline }
+}
+
 function fingerprint(weights) {
   return weights.map(w => w.toString()).join('|')
 }
@@ -229,8 +331,10 @@ function inverseAnalysis(draws, limit) {
     return { label, top3Count: a.length, top10Count: b.length, top3MeanRank: a.length ? a.reduce((s,d)=>s+d.rank,0)/a.length : 0, top10MeanRank: b.length ? b.reduce((s,d)=>s+d.rank,0)/b.length : 0 }
   })
 
+  const rankingTests = runRankingTests(draws, limit)
+
   return {
-    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics,
+    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics, rankingTests,
     metrics: {
       totalNumbers,
       top1Total, top3Total, top5Total, top10Total,
@@ -402,6 +506,34 @@ export default function Andamento({ draws }) {
                 <p style={styles.caption}>I primi 30 casi in cui il numero vincente è nella Top 10 ma non nella Top 3. Sono i casi più utili per cercare il criterio mancante di ordinamento.</p>
               </div>
               <div style={{ marginTop: 14, overflowX: 'auto' }}><table style={ui.table}><thead><tr><th>Posizione</th><th>Top 3</th><th>Rank 4–10</th><th>Rank medio Top 3</th><th>Rank medio 4–10</th></tr></thead><tbody>{analysis.positionDiagnostics.map(p=><tr key={p.label}><td><b>{p.label}</b></td><td>{p.top3Count}</td><td>{p.top10Count}</td><td>{p.top3MeanRank.toFixed(2)}</td><td>{p.top10MeanRank.toFixed(2)}</td></tr>)}</tbody></table></div>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Test A/B/C — ricalibrazione dell'ordinamento</h3>
+              <p style={styles.caption}>
+                Questi test non modificano il motore. Confrontano l'attuale ranking con: A) un fine-ranker che esclude VERTVOL e COLD_H,
+                B) diverse intensità di COLD_H mantenendo fissi gli altri pesi ottimizzati, C) trasformazioni non lineari di HOT_V e DELAY_V.
+                Sono ancora test retrospettivi: servono per scegliere l'ipotesi da validare successivamente fuori campione.
+              </p>
+              <div style={{ overflowX:'auto' }}>
+                <table style={ui.table}>
+                  <thead><tr><th>Test</th><th>Rank 1</th><th>Top 3</th><th>Top 5</th><th>Top 10</th><th>Rank medio</th><th>Δ Top 3</th><th>Δ Top 10</th></tr></thead>
+                  <tbody>{analysis.rankingTests.metrics.map(m => {
+                    const b = analysis.rankingTests.baseline
+                    return <tr key={m.key}>
+                      <td><b>{m.label}</b></td><td>{pct(m.rank1,m.total)}</td><td>{pct(m.top3,m.total)}</td><td>{pct(m.top5,m.total)}</td><td>{pct(m.top10,m.total)}</td><td>{m.avgRank.toFixed(2)}</td>
+                      <td>{m.key==='baseline'?'—':`${m.top3-b.top3>=0?'+':''}${((m.top3-b.top3)/b.total*100).toFixed(1)} pt`}</td>
+                      <td>{m.key==='baseline'?'—':`${m.top10-b.top10>=0?'+':''}${((m.top10-b.top10)/b.total*100).toFixed(1)} pt`}</td>
+                    </tr>
+                  })}</tbody>
+                </table>
+              </div>
+              <div style={{ ...styles.card, marginTop:10, color:'#91a8ba', lineHeight:1.55 }}>
+                <b style={{color:'#c7d9e8'}}>Come leggere il test:</b> la riga migliore non è automaticamente la soluzione finale.
+                Se A aumenta Top 3 senza perdere Top 10, abbiamo evidenza a favore di un ranking a due stadi.
+                Se B migliora soprattutto Top 3 riducendo COLD_H, COLD_H potrebbe essere utile per la selezione ma controproducente nel fine-ranking.
+                Se C migliora, la forma della funzione potrebbe essere più importante del semplice peso lineare.
+              </div>
             </div>
 
             <div style={{ marginTop: 18 }}>
