@@ -52,6 +52,23 @@ function rankWithWeights(features, position, number, weights) {
   return idx >= 0 ? idx + 1 : scored.length + 1
 }
 
+function rankDistribution(ranks) {
+  const counts = { r1: 0, r2_3: 0, r4_5: 0, r6_10: 0, r11_20: 0, r21p: 0 }
+  for (const rank of ranks) {
+    if (rank === 1) counts.r1++
+    else if (rank <= 3) counts.r2_3++
+    else if (rank <= 5) counts.r4_5++
+    else if (rank <= 10) counts.r6_10++
+    else if (rank <= 20) counts.r11_20++
+    else counts.r21p++
+  }
+  return counts
+}
+
+function topCoverage(ranks, maxRank) {
+  return ranks.filter(r => r <= maxRank).length
+}
+
 function objective(features, target, weights) {
   const ranks = []
   let exact = 0
@@ -122,15 +139,22 @@ function inverseAnalysis(draws, limit) {
     const features = buildFeatures(history)
     const result = optimizeWeights(features, target)
     const currentRanks = objective(features, target, [1, 1, 1, 1, 1, 1]).ranks
+    const optimizedRanks = result.ranks
+    const distribution = rankDistribution(optimizedRanks)
     rows.push({
       index: t,
       date: draws[t][0],
       target,
       weights: result.weights,
       exact: result.exact,
-      ranks: result.ranks,
+      ranks: optimizedRanks,
       baseRanks: currentRanks,
-      rankSum: result.ranks.reduce((a, b) => a + b, 0),
+      top3: topCoverage(optimizedRanks, 3),
+      top5: topCoverage(optimizedRanks, 5),
+      top10: topCoverage(optimizedRanks, 10),
+      avgRank: optimizedRanks.reduce((a, b) => a + b, 0) / optimizedRanks.length,
+      rankSum: optimizedRanks.reduce((a, b) => a + b, 0),
+      distribution,
       fingerprint: fingerprint(result.weights)
     })
   }
@@ -162,9 +186,31 @@ function inverseAnalysis(draws, limit) {
 
   // Cerca anche gli "quasi perfetti": sono utili per capire quali variabili
   // avvicinano maggiormente la vincente quando il 6/6 non è possibile.
-  const near = [...rows].sort((a, b) => b.exact - a.exact || a.rankSum - b.rankSum).slice(0, 12)
+  const near = [...rows].sort((a, b) => b.top10 - a.top10 || b.exact - a.exact || a.rankSum - b.rankSum).slice(0, 12)
 
-  return { rows, exactRows, recurring, ruleStats, near }
+  const totalNumbers = rows.length * 6
+  const top1Total = rows.reduce((s, r) => s + r.exact, 0)
+  const top3Total = rows.reduce((s, r) => s + r.top3, 0)
+  const top5Total = rows.reduce((s, r) => s + r.top5, 0)
+  const top10Total = rows.reduce((s, r) => s + r.top10, 0)
+  const rankTotals = rows.reduce((acc, r) => {
+    for (const [key, value] of Object.entries(r.distribution)) acc[key] += value
+    return acc
+  }, { r1: 0, r2_3: 0, r4_5: 0, r6_10: 0, r11_20: 0, r21p: 0 })
+
+  return {
+    rows, exactRows, recurring, ruleStats, near,
+    metrics: {
+      totalNumbers,
+      top1Total, top3Total, top5Total, top10Total,
+      top1Pct: pct(top1Total, totalNumbers),
+      top3Pct: pct(top3Total, totalNumbers),
+      top5Pct: pct(top5Total, totalNumbers),
+      top10Pct: pct(top10Total, totalNumbers),
+      avgRank: totalNumbers ? rows.reduce((s, r) => s + r.rankSum, 0) / totalNumbers : 0,
+      rankTotals
+    }
+  }
 }
 
 const ui = {
@@ -274,6 +320,40 @@ export default function Andamento({ draws }) {
             </div>
 
             <div style={{ marginTop: 18 }}>
+              <h3 style={ui.h3}>Qualità della selezione vs qualità dell'ordinamento</h3>
+              <p style={styles.caption}>
+                Qui separiamo due problemi diversi: quanto bene il modello porta i numeri vincenti nella rosa dei candidati
+                e quanto bene riesce poi a ordinarli. Il caso 22/08/2026, per esempio, è 6/6 nella Top 10 ma solo 3/6 al rank 1.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <SmallStat label="Rank 1" value={`${analysis.metrics.top1Pct}`} sub={`${analysis.metrics.top1Total}/${analysis.metrics.totalNumbers} numeri`} />
+                <SmallStat label="Top 3" value={`${analysis.metrics.top3Pct}`} sub={`${analysis.metrics.top3Total}/${analysis.metrics.totalNumbers} numeri`} />
+                <SmallStat label="Top 5" value={`${analysis.metrics.top5Pct}`} sub={`${analysis.metrics.top5Total}/${analysis.metrics.totalNumbers} numeri`} />
+                <SmallStat label="Top 10" value={`${analysis.metrics.top10Pct}`} sub={`${analysis.metrics.top10Total}/${analysis.metrics.totalNumbers} numeri`} />
+                <SmallStat label="Rank medio" value={analysis.metrics.avgRank.toFixed(1)} sub="sui 6 numeri vincenti" />
+              </div>
+              <div style={{ ...styles.card, marginTop: 10 }}>
+                <div style={{ color: '#8fa9bd', fontSize: 12, marginBottom: 8 }}>Distribuzione dei rank dei numeri vincenti</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: 8 }}>
+                  {[
+                    ['1', analysis.metrics.rankTotals.r1],
+                    ['2–3', analysis.metrics.rankTotals.r2_3],
+                    ['4–5', analysis.metrics.rankTotals.r4_5],
+                    ['6–10', analysis.metrics.rankTotals.r6_10],
+                    ['11–20', analysis.metrics.rankTotals.r11_20],
+                    ['21+', analysis.metrics.rankTotals.r21p]
+                  ].map(([label, value]) => (
+                    <div key={label} style={{ border: '1px solid #18324a', borderRadius: 6, padding: '8px 10px' }}>
+                      <div style={{ color: '#6f91ad', fontSize: 11 }}>RANK {label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{value}</div>
+                      <div style={{ color: '#6f91ad', fontSize: 11 }}>{pct(value, analysis.metrics.totalNumbers)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18 }}>
               <h3 style={ui.h3}>Quali variabili vengono scelte?</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={ui.table}>
@@ -328,11 +408,11 @@ export default function Andamento({ draws }) {
             </div>
 
             <div style={{ marginTop: 22 }}>
-              <h3 style={ui.h3}>Migliori transizioni: dove il rank può essere migliorato</h3>
+              <h3 style={ui.h3}>Migliori transizioni: selezione riuscita, ordinamento da migliorare</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={ui.table}>
                   <thead>
-                    <tr><th>Data</th><th>Vincente</th><th>Rank ottimizzato</th><th>6/6?</th><th>Setting</th></tr>
+                    <tr><th>Data</th><th>Vincente</th><th>Rank ottimizzato</th><th>Top 3</th><th>Top 5</th><th>Top 10</th><th>Rank 1</th><th>Setting</th></tr>
                   </thead>
                   <tbody>
                     {analysis.near.map(row => (
@@ -340,6 +420,9 @@ export default function Andamento({ draws }) {
                         <td>{row.date}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{row.target.join(' · ')}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{row.ranks.join(' · ')}</td>
+                        <td>{row.top3}/6</td>
+                        <td>{row.top5}/6</td>
+                        <td><b>{row.top10}/6</b></td>
                         <td><b>{row.exact}/6</b></td>
                         <td><Weights weights={row.weights} /></td>
                       </tr>
