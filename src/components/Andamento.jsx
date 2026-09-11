@@ -35,6 +35,26 @@ function buildFeatures(history) {
   return POSITION_LABELS.map((_, p) => RULES.map(rule => normalizeMap(rule.fn(history, p))))
 }
 
+function scoredCandidates(features, position, weights) {
+  const candidates = new Set()
+  for (let r = 0; r < RULES.length; r++) {
+    for (const n of features[position][r].keys()) candidates.add(n)
+  }
+  const scored = []
+  for (const n of candidates) {
+    let score = 0
+    const values = []
+    for (let r = 0; r < RULES.length; r++) {
+      const v = features[position][r].get(n) || 0
+      values.push(v)
+      score += v * weights[r]
+    }
+    scored.push({ number: n, score, values })
+  }
+  scored.sort((a, b) => b.score - a.score || a.number - b.number)
+  return scored
+}
+
 function rankWithWeights(features, position, number, weights) {
   const candidates = new Set()
   for (let r = 0; r < RULES.length; r++) {
@@ -231,6 +251,60 @@ function fmtDate(date) {
   return date || '—'
 }
 
+function pairwiseRankingTest(draws, limit) {
+  const start = Math.max(1, draws.length - limit)
+  const comparisons = []
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const features = buildFeatures(history)
+    const baseline = optimizeWeights(features, target)
+    for (let p = 0; p < 6; p++) {
+      const winner = target[p]
+      const ranked = scoredCandidates(features, p, baseline.weights)
+      const wi = ranked.findIndex(x => x.number === winner)
+      if (wi < 0 || wi === 0 || wi > 9) continue
+      const prev = ranked[wi - 1]
+      const top = ranked[0]
+      comparisons.push({
+        date: draws[t][0], position: p, number: winner, rank: wi + 1,
+        winnerValues: features[p].map(m => m.get(winner) || 0),
+        prevValues: prev.values, prevNumber: prev.number, prevScore: prev.score,
+        winnerScore: ranked[wi].score,
+        topValues: top.values, topNumber: top.number, topScore: top.score,
+        gaps: features[p].map((m, r) => (m.get(winner) || 0) - (prev.values[r] || 0)),
+        topGaps: features[p].map((m, r) => (m.get(winner) || 0) - (top.values[r] || 0))
+      })
+    }
+  }
+
+  const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0
+  const featureStats = RULES.map((rule, r) => {
+    const gaps = comparisons.map(c => c.gaps[r])
+    const topGaps = comparisons.map(c => c.topGaps[r])
+    const winnerHigher = gaps.filter(x => x > 0).length
+    const winnerLower = gaps.filter(x => x < 0).length
+    return {
+      ...rule, meanGap: mean(gaps), meanTopGap: mean(topGaps),
+      winnerHigher, winnerLower, higherPct: pct(winnerHigher, comparisons.length),
+      lowerPct: pct(winnerLower, comparisons.length)
+    }
+  }).sort((a,b) => b.meanGap - a.meanGap)
+
+  const rankBuckets = [
+    {label:'Rank 4', test:r=>r===4},
+    {label:'Rank 5–6', test:r=>r>=5&&r<=6},
+    {label:'Rank 7–10', test:r=>r>=7&&r<=10}
+  ].map(b => {
+    const items = comparisons.filter(c => b.test(c.rank))
+    return { ...b, count:items.length, avgRank:mean(items.map(c=>c.rank)),
+      meanScoreGap:mean(items.map(c=>c.winnerScore-c.prevScore)) }
+  })
+
+  const topCases = [...comparisons].sort((a,b)=>a.rank-b.rank).slice(0, 30)
+  return { comparisons, featureStats, rankBuckets, topCases }
+}
+
 function inverseAnalysis(draws, limit) {
   const start = Math.max(1, draws.length - limit)
   const rows = []
@@ -332,9 +406,10 @@ function inverseAnalysis(draws, limit) {
   })
 
   const rankingTests = runRankingTests(draws, limit)
+  const pairwiseTest = pairwiseRankingTest(draws, limit)
 
   return {
-    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics, rankingTests,
+    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics, rankingTests, pairwiseTest,
     metrics: {
       totalNumbers,
       top1Total, top3Total, top5Total, top10Total,
@@ -534,6 +609,39 @@ export default function Andamento({ draws }) {
                 Se B migliora soprattutto Top 3 riducendo COLD_H, COLD_H potrebbe essere utile per la selezione ma controproducente nel fine-ranking.
                 Se C migliora, la forma della funzione potrebbe essere più importante del semplice peso lineare.
               </div>
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Test D — scontri diretti: chi supera il vincente?</h3>
+              <p style={styles.caption}>
+                Per ogni numero vincente finito tra Rank 4 e 10, confronta le sue sei variabili con il numero immediatamente davanti nella classifica ottimizzata.
+                Il Δ è <b>vincente − concorrente</b>: positivo significa che il vincente aveva un valore più alto su quella variabile nonostante fosse stato superato.
+                È un test diagnostico, non una prova causale.
+              </p>
+              <div style={{ overflowX:'auto' }}>
+                <table style={ui.table}>
+                  <thead><tr><th>Variabile</th><th>Δ medio vs precedente</th><th>Δ medio vs Rank 1</th><th>Vincente più alto</th><th>Vincente più basso</th></tr></thead>
+                  <tbody>{analysis.pairwiseTest.featureStats.map(r => (
+                    <tr key={r.key}><td><b>{r.label}</b></td><td>{r.meanGap>=0?'+':''}{r.meanGap.toFixed(3)}</td><td>{r.meanTopGap>=0?'+':''}{r.meanTopGap.toFixed(3)}</td><td>{r.winnerHigher}/{analysis.pairwiseTest.comparisons.length} ({r.higherPct})</td><td>{r.winnerLower}/{analysis.pairwiseTest.comparisons.length} ({r.lowerPct})</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 12, overflowX:'auto' }}>
+                <table style={ui.table}>
+                  <thead><tr><th>Fascia</th><th>Casi</th><th>Rank medio</th><th>Gap score vincente vs precedente</th></tr></thead>
+                  <tbody>{analysis.pairwiseTest.rankBuckets.map(b => <tr key={b.label}><td><b>{b.label}</b></td><td>{b.count}</td><td>{b.avgRank.toFixed(2)}</td><td>{b.meanScoreGap.toFixed(4)}</td></tr>)}</tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 12, overflowX:'auto' }}>
+                <table style={ui.table}>
+                  <thead><tr><th>Data</th><th>Pos.</th><th>Vincente</th><th>Rank</th><th>Superato da</th><th>Gap score</th></tr></thead>
+                  <tbody>{analysis.pairwiseTest.topCases.map((c,i)=><tr key={`${c.date}-${c.position}-${i}`}><td>{c.date}</td><td>P{c.position+1}</td><td><b>{c.number}</b></td><td>{c.rank}</td><td>{c.prevNumber}</td><td>{(c.winnerScore-c.prevScore).toFixed(4)}</td></tr>)}</tbody>
+                </table>
+              </div>
+              <p style={styles.caption}>
+                Il punto chiave da cercare è una variabile con Δ sistematicamente positivo: significherebbe che il vincente possiede più di quella caratteristica del concorrente, ma il punteggio complessivo lo mette comunque dietro.
+                In quel caso potremmo ricalibrare la funzione o cercare un'interazione tra variabili invece di aggiungere regole a caso.
+              </p>
             </div>
 
             <div style={{ marginTop: 18 }}>
