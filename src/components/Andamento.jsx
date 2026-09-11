@@ -263,7 +263,7 @@ function pairwiseRankingTest(draws, limit) {
       const winner = target[p]
       const ranked = scoredCandidates(features, p, baseline.weights)
       const wi = ranked.findIndex(x => x.number === winner)
-      if (wi < 0 || wi === 0 || wi > 9) continue
+      if (wi < 0 || wi < 3 || wi > 9) continue
       const prev = ranked[wi - 1]
       const top = ranked[0]
       comparisons.push({
