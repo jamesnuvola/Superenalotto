@@ -305,6 +305,83 @@ function pairwiseRankingTest(draws, limit) {
   return { comparisons, featureStats, rankBuckets, topCases }
 }
 
+
+const INTERACTION_PAIRS = [
+  [0,1], [0,2], [0,3], [0,4], [0,5],
+  [1,2], [1,3], [1,4], [1,5],
+  [2,3], [2,4], [2,5],
+  [3,4], [3,5],
+  [4,5]
+]
+
+function interactionAnalysis(draws, limit) {
+  const start = Math.max(1, draws.length - limit)
+  const items = []
+
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const features = buildFeatures(history)
+    const baseline = optimizeWeights(features, target)
+    for (let p = 0; p < 6; p++) {
+      const winner = target[p]
+      const rank = baseline.ranks[p]
+      if (rank < 1) continue
+      const values = features[p].map(m => m.get(winner) || 0)
+      items.push({ date: draws[t][0], position: p, number: winner, rank, values })
+    }
+  }
+
+  const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0
+  const label = (a,b) => `${RULES[a].label} × ${RULES[b].label}`
+
+  const pairs = INTERACTION_PAIRS.map(([a,b]) => {
+    const top3 = items.filter(x => x.rank <= 3)
+    const r4_10 = items.filter(x => x.rank >= 4 && x.rank <= 10)
+    const top3Vals = top3.map(x => x.values[a] * x.values[b])
+    const r4Vals = r4_10.map(x => x.values[a] * x.values[b])
+    const allVals = items.map(x => x.values[a] * x.values[b])
+    const meanTop3 = mean(top3Vals)
+    const meanR4 = mean(r4Vals)
+    return {
+      a, b, key:`${RULES[a].key}__${RULES[b].key}`, label:label(a,b),
+      meanTop3, meanR4, delta:meanTop3-meanR4,
+      meanAll:mean(allVals),
+      top3N:top3Vals.length, r4N:r4Vals.length
+    }
+  }).sort((x,y) => y.delta - x.delta)
+
+  // Un controllo complementare: fra i casi Top 10 ma non Top 3, misura
+  // quali interazioni sono più spesso alte nel vincente rispetto al concorrente
+  // immediatamente sopra. Non modifica il ranking.
+  const direct = []
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const features = buildFeatures(history)
+    const baseline = optimizeWeights(features, target)
+    for (let p = 0; p < 6; p++) {
+      const winner = target[p]
+      const ranked = scoredCandidates(features, p, baseline.weights)
+      const wi = ranked.findIndex(x => x.number === winner)
+      if (wi < 3 || wi > 9) continue
+      const prev = ranked[wi - 1]
+      const winnerValues = features[p].map(m => m.get(winner) || 0)
+      const gaps = INTERACTION_PAIRS.map(([a,b]) => winnerValues[a] * winnerValues[b] - prev.values[a] * prev.values[b])
+      direct.push({ date:draws[t][0], position:p, number:winner, rank:wi+1, prevNumber:prev.number, gaps })
+    }
+  }
+
+  const directPairs = INTERACTION_PAIRS.map(([a,b], i) => {
+    const gaps = direct.map(x => x.gaps[i])
+    const positive = gaps.filter(x => x > 0).length
+    const negative = gaps.filter(x => x < 0).length
+    return { key:`${RULES[a].key}__${RULES[b].key}`, label:label(a,b), meanGap:mean(gaps), positive, negative, positivePct:pct(positive,direct.length), negativePct:pct(negative,direct.length) }
+  }).sort((x,y) => y.meanGap - x.meanGap)
+
+  return { items, pairs, direct, directPairs }
+}
+
 function inverseAnalysis(draws, limit) {
   const start = Math.max(1, draws.length - limit)
   const rows = []
@@ -407,9 +484,10 @@ function inverseAnalysis(draws, limit) {
 
   const rankingTests = runRankingTests(draws, limit)
   const pairwiseTest = pairwiseRankingTest(draws, limit)
+  const interactionTest = interactionAnalysis(draws, limit)
 
   return {
-    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics, rankingTests, pairwiseTest,
+    rows, exactRows, recurring, ruleStats, near, bandStats, top3vs4_10, top10NotTop3, positionDiagnostics, rankingTests, pairwiseTest, interactionTest,
     metrics: {
       totalNumbers,
       top1Total, top3Total, top5Total, top10Total,
@@ -642,6 +720,47 @@ export default function Andamento({ draws }) {
                 Il punto chiave da cercare è una variabile con Δ sistematicamente positivo: significherebbe che il vincente possiede più di quella caratteristica del concorrente, ma il punteggio complessivo lo mette comunque dietro.
                 In quel caso potremmo ricalibrare la funzione o cercare un'interazione tra variabili invece di aggiungere regole a caso.
               </p>
+            </div>
+
+
+            <div style={{ marginTop: 22 }}>
+              <h3 style={ui.h3}>Test E — interazioni: quando due variabili insieme spiegano il Top 3?</h3>
+              <p style={styles.caption}>
+                Qui non aggiungiamo nuove regole. Per ogni coppia delle sei variabili calcoliamo il prodotto dei valori normalizzati
+                (A × B) e confrontiamo la media sui numeri vincenti finiti in Top 3 con quella dei vincenti finiti in Rank 4–10.
+                Un Δ positivo indica che la combinazione è mediamente più alta nel Top 3. È un test diagnostico retrospettivo, non causale.
+              </p>
+              <div style={{ overflowX:'auto' }}>
+                <table style={ui.table}>
+                  <thead><tr><th>Interazione</th><th>Media Top 3</th><th>Media Rank 4–10</th><th>Δ</th><th>N</th></tr></thead>
+                  <tbody>{analysis.interactionTest.pairs.map(r => (
+                    <tr key={r.key}><td><b>{r.label}</b></td><td>{r.meanTop3.toFixed(3)}</td><td>{r.meanR4.toFixed(3)}</td><td>{r.delta>=0?'+':''}{r.delta.toFixed(3)}</td><td>{r.top3N} / {r.r4N}</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <div style={{ ...styles.card, marginTop:10, color:'#91a8ba', lineHeight:1.55 }}>
+                <b style={{color:'#c7d9e8'}}>Come la leggiamo:</b> se una coppia ha un Δ nettamente superiore alle singole variabili,
+                abbiamo un indizio che il modello lineare potrebbe perdere una relazione fra due segnali già presenti. Non significa ancora
+                che quella coppia debba essere inserita nel motore: va validata su periodi non usati per il fitting.
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <h3 style={ui.h3}>Test E2 — scontro diretto delle interazioni</h3>
+                <p style={styles.caption}>
+                  Considera solo i 236 casi (o il numero corrispondente al periodo scelto) in cui il vincente è tra Rank 4 e 10.
+                  Per ogni interazione confronta A×B del vincente con A×B del candidato immediatamente sopra.
+                  È la versione più vicina alla domanda: “cosa possiede il vincente che il modello non ha premiato abbastanza?”.
+                </p>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={ui.table}>
+                    <thead><tr><th>Interazione</th><th>Δ medio</th><th>Vincente più alto</th><th>Vincente più basso</th></tr></thead>
+                    <tbody>{analysis.interactionTest.directPairs.map(r => (
+                      <tr key={r.key}><td><b>{r.label}</b></td><td>{r.meanGap>=0?'+':''}{r.meanGap.toFixed(3)}</td><td>{r.positive}/{analysis.interactionTest.direct.length} ({r.positivePct})</td><td>{r.negative}/{analysis.interactionTest.direct.length} ({r.negativePct})</td></tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                <p style={styles.caption}>La priorità è cercare un'interazione con Δ positivo e una frequenza di Δ positivo non marginale. Se emerge, la prossima prova sarà una modifica controllata della funzione di scoring, non l'aggiunta indiscriminata di una nuova regola.</p>
+              </div>
             </div>
 
             <div style={{ marginTop: 18 }}>
