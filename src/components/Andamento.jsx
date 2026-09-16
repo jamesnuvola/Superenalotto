@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { P, styles } from '../utils/constants'
 import PosizioniChart, { historicalSeries } from './PosizioniChart'
+import { generateTopSestine } from '../engine/multigen'
 import {
   hotScores,
   delayScores,
@@ -807,6 +808,59 @@ function inverseAnalysis(draws, limit) {
   }
 }
 
+
+// VALIDAZIONE END-TO-END DEL GENERATORE.
+// Questo blocco non modifica il motore: ricostruisce walk-forward le sestine
+// che il generatore avrebbe proposto prima di ogni estrazione e confronta
+// direttamente quelle proposte con la sestina realmente uscita.
+function hitCount(candidate, target) {
+  const targetSet = new Set(target)
+  return candidate.numeri.filter(n => targetSet.has(n)).length
+}
+
+function validateGenerator(draws, limit = 30, howMany = 10) {
+  const start = Math.max(1, draws.length - limit)
+  const rows = []
+  for (let t = start; t < draws.length; t++) {
+    const history = draws.slice(0, t)
+    const target = draws[t][2]
+    const generated = generateTopSestine(history, howMany)
+    const hits = generated.map(s => hitCount(s, target))
+    rows.push({
+      index: t,
+      date: draws[t][0],
+      target,
+      generated: generated.length,
+      hits,
+      best: hits.length ? Math.max(...hits) : 0,
+      avg: hits.length ? hits.reduce((a, b) => a + b, 0) / hits.length : 0,
+      atLeast2: hits.filter(x => x >= 2).length,
+      atLeast3: hits.filter(x => x >= 3).length,
+      atLeast4: hits.filter(x => x >= 4).length,
+      atLeast5: hits.filter(x => x >= 5).length,
+      exact6: hits.filter(x => x === 6).length
+    })
+  }
+  const total = rows.length * howMany
+  const flat = rows.flatMap(r => r.hits)
+  return {
+    rows,
+    limit: rows.length,
+    howMany,
+    avgHits: flat.length ? flat.reduce((a,b)=>a+b,0)/flat.length : 0,
+    pct2: total ? rows.reduce((a,r)=>a+r.atLeast2,0)/total : 0,
+    pct3: total ? rows.reduce((a,r)=>a+r.atLeast3,0)/total : 0,
+    pct4: total ? rows.reduce((a,r)=>a+r.atLeast4,0)/total : 0,
+    pct5: total ? rows.reduce((a,r)=>a+r.atLeast5,0)/total : 0,
+    pct6: total ? rows.reduce((a,r)=>a+r.exact6,0)/total : 0,
+    draw2plus: rows.filter(r=>r.best>=2).length,
+    draw3plus: rows.filter(r=>r.best>=3).length,
+    draw4plus: rows.filter(r=>r.best>=4).length,
+    draw5plus: rows.filter(r=>r.best>=5).length,
+    draw6: rows.filter(r=>r.best===6).length
+  }
+}
+
 const ui = {
   input: { background: '#07101a', color: '#cfe2f1', border: '1px solid #18324a', borderRadius: 6, padding: '7px 9px' },
   button: { background: '#0b2234', color: '#bfeaff', border: '1px solid #1c5574', borderRadius: 6, padding: '8px 12px', cursor: 'pointer', fontWeight: 700 },
@@ -845,6 +899,10 @@ export default function Andamento({ draws }) {
   const [limit, setLimit] = useState(180)
   const [analysis, setAnalysis] = useState(null)
   const [running, setRunning] = useState(false)
+  const [validationLimit, setValidationLimit] = useState(30)
+  const [validationHowMany, setValidationHowMany] = useState(10)
+  const [validation, setValidation] = useState(null)
+  const [validationRunning, setValidationRunning] = useState(false)
   const [rAnalysisState, setRAnalysisState] = useState(null)
   const [rRunning, setRRunning] = useState(false)
   const [r2AnalysisState, setR2AnalysisState] = useState(null)
@@ -891,6 +949,15 @@ export default function Andamento({ draws }) {
     }, 20)
   }
 
+  const runValidation = () => {
+    setValidationRunning(true)
+    setTimeout(() => {
+      const result = validateGenerator(draws, Number(validationLimit) || 30, Number(validationHowMany) || 10)
+      setValidation(result)
+      setValidationRunning(false)
+    }, 20)
+  }
+
   const best = analysis?.near?.[0]
   const current = analysis?.rows?.[analysis.rows.length - 1]
   const exactCount = analysis?.exactRows?.length || 0
@@ -905,6 +972,60 @@ export default function Andamento({ draws }) {
           estrazione). Sopra ogni punto il numero estratto, sotto il suo rank. Il Jolly è a rombi.
         </p>
         <PosizioniChart columns={columns} lines={lines} jolly={{ values: hs.jollyValues }} />
+      </section>
+
+      <section style={styles.section}>
+        <h2 style={styles.h2}>Validazione reale delle sestine generate</h2>
+        <p style={styles.caption}>
+          Questo è il banco prova pratico del motore: per ogni estrazione del periodo scelto,
+          il generatore viene eseguito usando esclusivamente lo storico precedente. Le sestine
+          prodotte vengono poi confrontate con la sestina realmente uscita. Qui misuriamo quindi
+          centrature reali (2/3/4/5/6), non soltanto la qualità del rank.
+        </p>
+        <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', margin:'14px 0' }}>
+          <label style={{ color:'#8ba5ba', fontSize:13 }}>Estrazioni</label>
+          <select value={validationLimit} onChange={e=>setValidationLimit(e.target.value)} style={{...ui.input,width:90}}>
+            {[10,20,30,60].map(n=><option key={n} value={n}>{n}</option>)}
+          </select>
+          <label style={{ color:'#8ba5ba', fontSize:13 }}>Sestine / estrazione</label>
+          <select value={validationHowMany} onChange={e=>setValidationHowMany(e.target.value)} style={{...ui.input,width:90}}>
+            {[5,10,20].map(n=><option key={n} value={n}>{n}</option>)}
+          </select>
+          <button onClick={runValidation} disabled={validationRunning} style={ui.button}>
+            {validationRunning ? 'Validazione in corso…' : 'Testa centrature'}
+          </button>
+        </div>
+        {!validation && (
+          <div style={{...styles.card,color:'#7893a9',lineHeight:1.6}}>
+            Il test è volutamente separato dalle analisi retrospettive: qui non si ottimizzano
+            i pesi sulla vincente. Si esegue davvero il generatore prima dell'estrazione e si
+            misura ciò che avrebbe indovinato.
+          </div>
+        )}
+        {validation && <>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <SmallStat label="Centrature medie" value={validation.avgHits.toFixed(3)} sub="per sestina generata" />
+            <SmallStat label="2+ numeri" value={`${(validation.pct2*100).toFixed(2)}%`} sub={`${validation.draw2plus}/${validation.limit} estrazioni con almeno 2`} />
+            <SmallStat label="3+ numeri" value={`${(validation.pct3*100).toFixed(2)}%`} sub={`${validation.draw3plus}/${validation.limit} estrazioni con almeno 3`} />
+            <SmallStat label="4+ numeri" value={`${(validation.pct4*100).toFixed(2)}%`} sub={`${validation.draw4plus}/${validation.limit} estrazioni con almeno 4`} />
+            <SmallStat label="5+ numeri" value={`${(validation.pct5*100).toFixed(2)}%`} sub={`${validation.draw5plus}/${validation.limit} estrazioni con almeno 5`} />
+            <SmallStat label="6/6" value={`${(validation.pct6*100).toFixed(2)}%`} sub={`${validation.draw6}/${validation.limit} estrazioni`} />
+          </div>
+          <div style={{marginTop:18,overflowX:'auto'}}>
+            <table style={ui.table}>
+              <thead><tr><th>Data</th><th>Reale</th><th>Migliore</th><th>Media</th><th>2+</th><th>3+</th><th>4+</th><th>5+</th><th>6/6</th></tr></thead>
+              <tbody>{validation.rows.slice().reverse().map(r=><tr key={r.index}>
+                <td>{r.date}</td><td style={{whiteSpace:'nowrap'}}>{r.target.join(' · ')}</td><td><b>{r.best}/6</b></td><td>{r.avg.toFixed(2)}</td>
+                <td>{r.atLeast2}</td><td>{r.atLeast3}</td><td>{r.atLeast4}</td><td>{r.atLeast5}</td><td>{r.exact6}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <div style={{...styles.card,marginTop:12,color:'#8fa7ba',lineHeight:1.55}}>
+            <b style={{color:'#c7d9e8'}}>Nota:</b> questo pannello misura il generatore attuale così com'è.
+            Non promuove alcuna modifica. Quando avremo una variante geometrica o una nuova componente
+            validata, potremo aggiungerla qui e confrontarla sullo stesso identico periodo OOS.
+          </div>
+        </>}
       </section>
 
       <section style={styles.section}>
