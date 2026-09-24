@@ -205,6 +205,7 @@ const variants=[
   {id:'FAM2_BAL',opts:{scoreMode:'balanced',minFamilies:2}},
   {id:'BAND',opts:{ids:new Set(['OFF','FAVORISCI','EVITA']),scoreMode:'balanced'}},
   {id:'INT_ONLY',opts:{ids:new Set(['W2','W3','W4','W5']),scoreMode:'balanced'}}
+]
 const results=Object.fromEntries(variants.map(v=>[v.id,{base:[],struct:[],cover10:[],cover15:[]}]))
 const blockSize=Math.floor((END-START+1)/3)
 let total=0
