@@ -196,7 +196,7 @@ function convergence(history,fams,opts={}){
   }
   rec(0,[])
   combos.sort((a,b)=>b.score-a.score||a.avg-b.avg)
-  const seen=new Set(),out=[]
+  const out=[]
   for(const c of combos){
     const k=key6(c.nums)
     if(!seen.has(k)){seen.add(k);out.push(c)}
