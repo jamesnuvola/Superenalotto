@@ -109,7 +109,17 @@ function familiesFor(history){
   return fam
 }
 
+function shapeOf(a){
+  const odd=a.filter(n=>n%2).length
+  const decades=new Set(a.map(n=>Math.floor((n-1)/10))).size
+  const gaps=[];for(let i=1;i<a.length;i++)gaps.push(a[i]-a[i-1])
+  const small=gaps.filter(g=>g<=5).length
+  const large=gaps.filter(g>=15).length
+  return {odd,decades,small,large,gaps}
+}
+function roleConcentration(x){const s=x.roles.reduce((a,b)=>a+b,0)||1;return Math.max(...x.roles)/s}
 function convergence(history,fams,opts={}){
+  const seen=initSeen(history)
   const fullRanks=[0,1,2,3,4,5].map(p=>rankedCandidates(history,p))
   const rankMap=fullRanks.map(r=>new Map(r.map((x,i)=>[x[0],i+1])))
   const famSet=new Map(), role=new Map(), source=new Map()
@@ -153,6 +163,9 @@ function convergence(history,fams,opts={}){
     if(mode==='balanced') return x.f*50+x.src*30+x.scoreIntuito*20+x.scoreBand*10
     if(mode==='favorisci') return x.scoreBand*100+x.f*20+x.src*10
     if(mode==='cross') return (x.src===2?100:0)+x.scoreIntuito*30+x.f*20+x.scoreBand*10
+    if(mode==='role') return x.f*40+x.src*25+x.scoreIntuito*15+x.scoreBand*5+roleConcentration(x)*100
+    if(mode==='roleShape') return x.f*40+x.src*25+x.scoreIntuito*15+x.scoreBand*5+roleConcentration(x)*100
+    if(mode==='shape') return x.f*30+x.src*20+x.scoreIntuito*10+x.scoreBand*5
     return x.f*100+x.src*10
   }
   cand.sort((a,b)=>value(b)-value(a)||b.f-a.f||a.n-b.n)
@@ -165,8 +178,17 @@ function convergence(history,fams,opts={}){
       const avg=sumRank/6
       if(avg>=AVG_MIN&&avg<=AVG_MAX){
         const nums=picks.map(i=>cand[i].n)
-        const score=sumF*100+sumSrc*10+sumRole
-        combos.push({nums,score,sumF,sumSrc,sumRole,avg})
+        if(isDup(nums,seen)) return
+        const sh=shapeOf(nums)
+        const roleScore=picks.reduce((s,i)=>s+roleConcentration(cand[i]),0)
+        let shapeScore=0
+        if(mode==='roleShape' || mode==='shape'){
+          // Soft structural shape preference: favor historically common parity/decade/gap morphology.
+          const targetOdd=3, targetDec=5, targetSmall=2, targetLarge=1
+          shapeScore=20*Math.abs(sh.odd-targetOdd)*-1+10*Math.abs(sh.decades-targetDec)*-1+8*Math.abs(sh.small-targetSmall)*-1+5*Math.abs(sh.large-targetLarge)*-1
+        }
+        const score=sumF*100+sumSrc*10+sumRole+roleScore*20+shapeScore
+        combos.push({nums,score,sumF,sumSrc,sumRole,avg,shape:sh,roleScore})
       }
       return
     }
@@ -204,7 +226,10 @@ const variants=[
   {id:'BOTH_BAL',opts:{scoreMode:'balanced',requireBoth:true}},
   {id:'FAM2_BAL',opts:{scoreMode:'balanced',minFamilies:2}},
   {id:'BAND',opts:{ids:new Set(['OFF','FAVORISCI','EVITA']),scoreMode:'balanced'}},
-  {id:'INT_ONLY',opts:{ids:new Set(['W2','W3','W4','W5']),scoreMode:'balanced'}}
+  {id:'INT_ONLY',opts:{ids:new Set(['W2','W3','W4','W5']),scoreMode:'balanced'}},
+  {id:'ROLE',opts:{scoreMode:'role'}},
+  {id:'ROLE_SHAPE',opts:{scoreMode:'roleShape'}},
+  {id:'SHAPE',opts:{scoreMode:'shape'}}
 ]
 const results=Object.fromEntries(variants.map(v=>[v.id,{base:[],struct:[],cover10:[],cover15:[]}]))
 const blockSize=Math.floor((END-START+1)/3)
@@ -232,7 +257,7 @@ function blockStats(rows,block){
 const lines=[
 '# SONAR structural convergence ablation — 24/09/2026','',
 `Target causale: ${START}–${END} (${total} estrazioni). Stesse 3 bande + Intuito W2-W5 per ogni target; nessun dato post-target.`,'',
-'Varianti: family count, balanced (family+source+Intuito+FAVORISCI/EVITA), cross-source, Intuito density, FAVORISCI, source diversity, e filtri BOTH/FAM2/BAND/INT_ONLY. Costruzione sempre top15 → combinazioni crescenti → rank medio 12.67–33.83 → top10.',
+'Varianti: family count, balanced, cross-source, Intuito density, FAVORISCI, source diversity, filtri BOTH/FAM2/BAND/INT_ONLY, più ROLE/ROLE_SHAPE/SHAPE. Tutte le sestine strutturali ora escludono esplicitamente sestine e cinquine già uscite.',
 ''
 ]
 for(const v of variants){
