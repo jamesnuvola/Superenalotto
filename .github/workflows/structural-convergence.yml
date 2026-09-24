@@ -2,7 +2,7 @@ name: SONAR structural convergence backtest
 on:
   push:
     paths:
-      - 'scripts/structural-convergence.mjs'
+      - 'scripts/structural-convergence-ablation.mjs'
       - '.github/workflows/structural-convergence.yml'
   workflow_dispatch: {}
 permissions:
@@ -18,11 +18,11 @@ jobs:
       - name: Prepare ESM imports for Node
         run: |
           sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g; s|'./dominant-band'|'./dominant-band.js'|g" src/engine/multigen.js src/engine/dominant-band.js
-      - run: node scripts/structural-convergence.mjs
+      - run: node scripts/structural-convergence-ablation.mjs
       - name: Commit report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SONAR_structural_convergence_backtest_24settembre2026.md
-          git diff --staged --quiet || git commit -m "Backtest structural convergence SONAR"
+          git add SONAR_structural_convergence_ablation_24settembre2026.md
+          git diff --staged --quiet || git commit -m "Ablation structural convergence SONAR"
           git push
