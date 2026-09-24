@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'scripts/structural-convergence.mjs'
+      - '.github/workflows/structural-convergence.yml'
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -14,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: node scripts/structural-convergence.mjs
+      - run: node --experimental-specifier-resolution=node scripts/structural-convergence.mjs
       - name: Commit report
         run: |
           git config user.name "github-actions[bot]"
