@@ -1,0 +1,24 @@
+name: SONAR structural convergence backtest
+on:
+  push:
+    paths:
+      - 'scripts/structural-convergence.mjs'
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node scripts/structural-convergence.mjs
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SONAR_structural_convergence_backtest_24settembre2026.md
+          git diff --staged --quiet || git commit -m "Backtest structural convergence SONAR"
+          git push
