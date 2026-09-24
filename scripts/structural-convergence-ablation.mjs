@@ -136,11 +136,26 @@ function convergence(history,fams,opts={}){
   })
   const nums=eligible.slice(0,TOP_POOL)
 
+
   const cand=nums.map(n=>({
+    scoreFamily:famSet.get(n).size,
+    scoreSource:source.get(n).size,
+    scoreIntuito:[...famSet.get(n)].filter(x=>x[0]==='W').length,
+    scoreBand:[...famSet.get(n)].filter(x=>x==='FAVORISCI').length-[...famSet.get(n)].filter(x=>x==='EVITA').length,
     n,f:famSet.get(n).size,src:source.get(n).size,
     roles:role.get(n),ranks:rankMap.map(m=>m.get(n)||99)
   }))
-  cand.sort((a,b)=>b.f-a.f||b.src-a.src||a.n-b.n)
+  const mode=opts.scoreMode||'family'
+  const value=x=>{
+    if(mode==='family') return x.f*100+x.src*10
+    if(mode==='source') return x.src*100+x.f*10
+    if(mode==='intuito') return x.scoreIntuito*100+x.f*10+x.src
+    if(mode==='balanced') return x.f*50+x.src*30+x.scoreIntuito*20+x.scoreBand*10
+    if(mode==='favorisci') return x.scoreBand*100+x.f*20+x.src*10
+    if(mode==='cross') return (x.src===2?100:0)+x.scoreIntuito*30+x.f*20+x.scoreBand*10
+    return x.f*100+x.src*10
+  }
+  cand.sort((a,b)=>value(b)-value(a)||b.f-a.f||a.n-b.n)
 
   const combos=[]
   function rec(start,picks){
@@ -180,12 +195,16 @@ function stats(rows){
 
 const START=Number(process.env.START||600), END=Math.min(Number(process.env.END||draws.length-1),draws.length-1)
 const variants=[
-  {id:'ALL',opts:{}},
-  {id:'BOTH',opts:{requireBoth:true}},
-  {id:'FAM2',opts:{minFamilies:2}},
-  {id:'BAND',opts:{ids:new Set(['OFF','FAVORISCI','EVITA'])}},
-  {id:'INTUITO',opts:{ids:new Set(['W2','W3','W4','W5'])}}
-]
+  {id:'ALL',opts:{scoreMode:'family'}},
+  {id:'BALANCED',opts:{scoreMode:'balanced'}},
+  {id:'CROSS',opts:{scoreMode:'cross'}},
+  {id:'INTUITO',opts:{scoreMode:'intuito'}},
+  {id:'FAVORISCI',opts:{scoreMode:'favorisci'}},
+  {id:'SOURCE',opts:{scoreMode:'source'}},
+  {id:'BOTH_BAL',opts:{scoreMode:'balanced',requireBoth:true}},
+  {id:'FAM2_BAL',opts:{scoreMode:'balanced',minFamilies:2}},
+  {id:'BAND',opts:{ids:new Set(['OFF','FAVORISCI','EVITA']),scoreMode:'balanced'}},
+  {id:'INT_ONLY',opts:{ids:new Set(['W2','W3','W4','W5']),scoreMode:'balanced'}}
 const results=Object.fromEntries(variants.map(v=>[v.id,{base:[],struct:[],cover10:[],cover15:[]}]))
 const blockSize=Math.floor((END-START+1)/3)
 let total=0
@@ -212,7 +231,7 @@ function blockStats(rows,block){
 const lines=[
 '# SONAR structural convergence ablation — 24/09/2026','',
 `Target causale: ${START}–${END} (${total} estrazioni). Stesse 3 bande + Intuito W2-W5 per ogni target; nessun dato post-target.`,'',
-'Varianti congelate: ALL=7 famiglie; BOTH=solo numeri presenti sia in banda sia in Intuito; FAM2=solo numeri presenti in almeno 2 famiglie; BAND=solo 3 famiglie banda; INTUITO=solo W2-W5. Costruzione sempre top15 → combinazioni crescenti → rank medio 12.67–33.83 → top10.',
+'Varianti: family count, balanced (family+source+Intuito+FAVORISCI/EVITA), cross-source, Intuito density, FAVORISCI, source diversity, e filtri BOTH/FAM2/BAND/INT_ONLY. Costruzione sempre top15 → combinazioni crescenti → rank medio 12.67–33.83 → top10.',
 ''
 ]
 for(const v of variants){
