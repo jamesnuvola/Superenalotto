@@ -15,7 +15,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: node --experimental-specifier-resolution=node scripts/structural-convergence.mjs
+      - name: Prepare ESM imports for Node
+        run: |
+          sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g; s|'./dominant-band'|'./dominant-band.js'|g" src/engine/multigen.js src/engine/dominant-band.js
+      - run: node scripts/structural-convergence.mjs
       - name: Commit report
         run: |
           git config user.name "github-actions[bot]"
