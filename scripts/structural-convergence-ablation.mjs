@@ -114,7 +114,7 @@ function shapeOf(a){
   const decades=new Set(a.map(n=>Math.floor((n-1)/10))).size
   const gaps=[];for(let i=1;i<a.length;i++)gaps.push(a[i]-a[i-1])
   const small=gaps.filter(g=>g<=5).length
-  const large=gaps.filter(g>=15).length
+  const large=gaps.filter(g=>g>=15).length
   return {odd,decades,small,large,gaps}
 }
 function roleConcentration(x){const s=x.roles.reduce((a,b)=>a+b,0)||1;return Math.max(...x.roles)/s}
