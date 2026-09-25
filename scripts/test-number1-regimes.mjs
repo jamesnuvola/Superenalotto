@@ -24,7 +24,7 @@ function runs(){
   const out=[];let st=0,state=has1(DS[0]);for(let i=1;i<=N;i++){const ns=i<N?has1(DS[i]):!state;if(ns!==state){out.push({state,len:i-st,start:DS[st].date,end:DS[i-1].date});st=i;state=ns}}return out
 }
 function motifs(k){
-  const m=new Map();for(let t=Math.max(600,k);t<N;t++){const x=DS.slice(t-k,t).map(has1?'1':'0').join('');const s=preSetting(t);if(!m.has(x))m.set(x,[]);m.get(x).push(s)}
+  const m=new Map();for(let t=Math.max(600,k);t<N;t++){const x=DS.slice(t-k,t).map(d=>has1(d)?'1':'0').join('');const s=preSetting(t);if(!m.has(x))m.set(x,[]);m.get(x).push(s)}
   return [...m.entries()].sort((a,b)=>b[1].length-a[1].length).slice(0,20).map(([m,a])=>{const c=new Map();for(const s of a)c.set(s,(c.get(s)||0)+1);return [m,a.length,[...c.entries()].sort((x,y)=>y[1]-x[1]).slice(0,3)]})
 }
 function regime(w){
