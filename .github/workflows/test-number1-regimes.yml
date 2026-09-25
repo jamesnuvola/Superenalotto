@@ -1,0 +1,30 @@
+name: SONAR test number 1 regimes
+on:
+  push:
+    paths:
+      - 'scripts/test-number1-regimes.mjs'
+      - '.github/workflows/test-number1-regimes.yml'
+      - 'src/data/draws.js'
+      - 'src/engine/scoring.js'
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Prepare ESM imports
+        run: |
+          sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g" src/engine/scoring.js scripts/test-number1-regimes.mjs
+      - run: node scripts/test-number1-regimes.mjs > SONAR_number1_regimes_25settembre2026.md
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SONAR_number1_regimes_25settembre2026.md
+          git diff --staged --quiet || git commit -m "Test number 1 regimes SONAR"
+          git push
