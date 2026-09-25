@@ -10,7 +10,7 @@ const band=r=>r<=5?'A1-5':r<=10?'B6-10':r<=20?'C11-20':'D21+'
 const sig=r=>r.map(band).join('|')
 const ranksAt=t=>DS[t].numbers.map((n,p)=>actualRank(DS.slice(0,t).map(x=>x.raw),p,n).rank)
 const preSetting=t=>sig(ranksAt(t))
-const features=t=>{const a=DS[t].numbers,g=a.slice(1).map((x,i)=>x-a[i]);return {sum:mean(a)*6,spread:a[5]-a[0],low:a.filter(x<=30).length,mid:a.filter(x>30&&x<=60).length,high:a.filter(x>60).length,odd:a.filter(x=>x%2).length,g1:g.filter(x=>x===1).length,k2:ranksAt(t).filter(r=>r<=2).length,rm:mean(ranksAt(t))}}
+const features=t=>{const a=DS[t].numbers,g=a.slice(1).map((x,i)=>x-a[i]);return {sum:mean(a)*6,spread:a[5]-a[0],low:a.filter(x=>x<=30).length,mid:a.filter(x=>x>30&&x<=60).length,high:a.filter(x=>x>60).length,odd:a.filter(x=>x%2).length,g1:g.filter(x=>x===1).length,k2:ranksAt(t).filter(r=>r<=2).length,rm:mean(ranksAt(t))}}
 const condRows=c=>{const r=[];for(let t=600;t<N;t++)if(c(t)){const rr=ranksAt(t),f=features(t);r.push({t,rr,s:sig(rr),...f})}return r}
 const prev1=condRows(t=>has1(DS[t-1])), prev0=condRows(t=>!has1(DS[t-1]))
 const top=(rows,k=10)=>{const m=new Map();for(const r of rows)m.set(r.s,(m.get(r.s)||0)+1);return [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,k)}
