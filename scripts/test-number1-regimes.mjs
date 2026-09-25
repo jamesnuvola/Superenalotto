@@ -8,7 +8,7 @@ const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0
 const q=(a,p)=>{const s=[...a].sort((x,y)=>x-y);if(!s.length)return 0;const z=(s.length-1)*p,i=Math.floor(z),f=z-i;return s[i]+(s[i+1]-s[i])*f}
 const band=r=>r<=5?'A1-5':r<=10?'B6-10':r<=20?'C11-20':'D21+'
 const sig=r=>r.map(band).join('|')
-const ranksAt=t=>DS[t].numbers.map((n,p)=>actualRank(DS.slice(0,t),p,n).rank)
+const ranksAt=t=>DS[t].numbers.map((n,p)=>actualRank(DS.slice(0,t).map(x=>x.raw),p,n).rank)
 const preSetting=t=>sig(ranksAt(t))
 const features=t=>{const a=DS[t].numbers,g=a.slice(1).map((x,i)=>x-a[i]);return {sum:mean(a)*6,spread:a[5]-a[0],low:a.filter(x<=30).length,mid:a.filter(x>30&&x<=60).length,high:a.filter(x>60).length,odd:a.filter(x=>x%2).length,g1:g.filter(x=>x===1).length,k2:ranksAt(t).filter(r=>r<=2).length,rm:mean(ranksAt(t))}}
 const condRows=c=>{const r=[];for(let t=600;t<N;t++)if(c(t)){const rr=ranksAt(t),f=features(t);r.push({t,rr,s:sig(rr),...f})}return r}
