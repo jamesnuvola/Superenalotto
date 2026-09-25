@@ -1,7 +1,7 @@
 import draws from '../src/data/draws.js'
 import { actualRank, rankedCandidates } from '../src/engine/scoring.js'
 
-const DS = draws.map(d=>({date:d[0],numbers:[...d[2]]}))
+const DS = draws.map(d=>({date:d[0],numbers:[...d[2]],raw:d}))
 const N=DS.length
 const has1=d=>d.numbers[0]===1
 const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0
