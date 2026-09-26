@@ -1,0 +1,24 @@
+name: Analyze CROWD-BACHECA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data/player-behavior/**'
+      - 'scripts/analyze-player-behavior.mjs'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run analysis
+        run: node scripts/analyze-player-behavior.mjs
+      - name: Save result
+        uses: actions/upload-artifact@v4
+        with:
+          name: crowd-bacheca-results
+          path: data/player-behavior/results.json
