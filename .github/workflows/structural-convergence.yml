@@ -19,8 +19,10 @@ jobs:
       - name: Prepare ESM imports for Node
         run: |
           sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g; s|'./dominant-band'|'./dominant-band.js'|g" src/engine/multigen.js src/engine/dominant-band.js
-      - name: Defensive patch for gap history
-        run: sed -i 's/occ.get(n).push(i)/(occ.get(n)||[]).push(i)/' scripts/vincicasa-port-test.mjs
+      - name: Defensive patches for port test
+        run: |
+          sed -i 's/occ.get(n).push(i)/(occ.get(n)||[]).push(i)/' scripts/vincicasa-port-test.mjs
+          sed -i 's/const a=occ.get(n), g=/const a=occ.get(n)||[], g=/' scripts/vincicasa-port-test.mjs
       - name: Run VinciCasa strategy port
         run: node scripts/vincicasa-port-test.mjs
       - name: Commit report
