@@ -27,7 +27,7 @@ jobs:
           sed -i 's/function relationScores(h){/function relationScores(h){h=h.slice(-200);/' scripts/vincicasa-port-test.mjs
           sed -i 's/function nucleusScores(h,i){/function nucleusScores(h,i){h=h.slice(-120);/' scripts/vincicasa-port-test.mjs
       - name: Run VinciCasa strategy port
-        run: START=2200 node scripts/vincicasa-port-test.mjs
+        run: START=2700 node scripts/vincicasa-port-test.mjs
       - name: Commit report
         run: |
           git config user.name "github-actions[bot]"
