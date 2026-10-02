@@ -24,8 +24,9 @@ jobs:
           sed -i 's/occ.get(n).push(i)/(occ.get(n)||[]).push(i)/' scripts/vincicasa-port-test.mjs
           sed -i 's/const a=occ.get(n), g=/const a=occ.get(n)||[], g=/' scripts/vincicasa-port-test.mjs
           sed -i 's/new Map(nums().map(n=>.35\*(nuc\[p\].get(n)||0)+.30\*(rel.pairs.get(n)||0)+.10\*(rel.triples.get(n)||0)+.15\*(rel.pos\[p\].get(n)||0)+.10\*freq.get(n)))/new Map(nums().map(n=>[n,.35*(nuc[p].get(n)||0)+.30*(rel.pairs.get(n)||0)+.10*(rel.triples.get(n)||0)+.15*(rel.pos[p].get(n)||0)+.10*freq.get(n)]))/' scripts/vincicasa-port-test.mjs
+          sed -i 's/function relationScores(h){/function relationScores(h){h=h.slice(-200);/' scripts/vincicasa-port-test.mjs
       - name: Run VinciCasa strategy port
-        run: node scripts/vincicasa-port-test.mjs
+        run: START=2200 node scripts/vincicasa-port-test.mjs
       - name: Commit report
         run: |
           git config user.name "github-actions[bot]"
