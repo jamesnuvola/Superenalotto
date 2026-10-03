@@ -1,16 +1,15 @@
-name: SONAR autonomous research loop
+name: SONAR SuperEnalotto autonomous research loop
 on:
   workflow_dispatch:
   push:
     branches:
-      - research/autonomous-engine-2026-10-03
-      - test/vincicasa-port-2026-10-02
+      - research/sonar-superenalotto-autonomous
   schedule:
     - cron: '17 */4 * * *'
 permissions:
   contents: write
 concurrency:
-  group: sonar-autonomous-research
+  group: sonar-superenalotto-autonomous-research
   cancel-in-progress: false
 jobs:
   research:
@@ -25,13 +24,15 @@ jobs:
         run: |
           sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g; s|'./dominant-band'|'./dominant-band.js'|g" src/engine/multigen.js src/engine/dominant-band.js
       - name: Syntax check
-        run: node --check scripts/sonar-research-engine.mjs
-      - name: Run autonomous research cycle
+        run: |
+          node --check scripts/sonar-strategy-library.mjs
+          node --check scripts/sonar-research-engine.mjs
+      - name: Run SuperEnalotto autonomous research cycle
         run: START=2700 BUDGET=16 node scripts/sonar-research-engine.mjs
       - name: Commit research state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SONAR_research_state.json SONAR_autonomous_research_report.md
-          git diff --staged --quiet || git commit -m "Advance autonomous SONAR research queue"
+          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md
+          git diff --staged --quiet || git commit -m "Advance SuperEnalotto SONAR research queue"
           git push
