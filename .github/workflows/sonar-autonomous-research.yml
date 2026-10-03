@@ -1,11 +1,8 @@
 name: SONAR SuperEnalotto autonomous research loop
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - research/sonar-superenalotto-autonomous
   schedule:
-    - cron: '17 */4 * * *'
+    - cron: '*/5 * * * *'
 permissions:
   contents: write
 concurrency:
