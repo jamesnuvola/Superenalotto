@@ -419,6 +419,214 @@
       "ge5": 0,
       "ge6": 0,
       "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:TREND",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 129,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:POSITION",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 129,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:TREND+FREQ",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 129,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:FREQ+RETURN",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 129,
+      "ge3": 1,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:FREQUENCY",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:RETURN",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:TREND",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:POSITION",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:TREND+FREQ",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:FREQ+RETURN",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 34,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:FREQUENCY",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 1,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:RETURN",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:TREND",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:POSITION",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:TREND+FREQ",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 0,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:FREQ+RETURN",
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": 194,
+      "ge3": 1,
+      "ge4": 0,
+      "ge5": 0,
+      "ge6": 0,
+      "status": "DISCOVERED"
     }
   ],
   "findings": [
@@ -1338,17 +1546,548 @@
       "cases": [],
       "complements": [],
       "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:TREND",
+      "context": {
+        "feature": "odd",
+        "polarity": "LOW",
+        "strategy": "TREND"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:POSITION",
+      "context": {
+        "feature": "odd",
+        "polarity": "LOW",
+        "strategy": "POSITION"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:TREND+FREQ",
+      "context": {
+        "feature": "odd",
+        "polarity": "LOW",
+        "strategy": "TREND+FREQ"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:odd:LOW:FREQ+RETURN",
+      "context": {
+        "feature": "odd",
+        "polarity": "LOW",
+        "strategy": "FREQ+RETURN"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "ticket": [
+            5,
+            9,
+            17,
+            18,
+            73,
+            85
+          ],
+          "hits": 3,
+          "target": [
+            5,
+            9,
+            15,
+            17,
+            48,
+            74
+          ],
+          "signature": {
+            "context": {
+              "sum": "LOW",
+              "highnum": "LOW",
+              "odd": "LOW",
+              "repeat": "LOW",
+              "values": {
+                "sum": 271,
+                "highnum": 2.761904761904762,
+                "odd": 2.9047619047619047,
+                "repeat": 0.45
+              }
+            },
+            "trajectory": [
+              {
+                "sum": 288,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 250,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 298,
+                "high": 3,
+                "odd": 2
+              },
+              {
+                "sum": 274,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 369,
+                "high": 4,
+                "odd": 3
+              }
+            ],
+            "target": {
+              "sum": 168,
+              "high": 2,
+              "odd": 4
+            }
+          }
+        }
+      ],
+      "complements": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "base": "FREQ+RETURN",
+          "baseHits": 3,
+          "residual": [
+            15,
+            48,
+            74
+          ],
+          "best": [
+            {
+              "strategy": "FREQUENCY",
+              "hits": 0,
+              "residualHits": 3
+            },
+            {
+              "strategy": "RETURN",
+              "hits": 0,
+              "residualHits": 1
+            },
+            {
+              "strategy": "TREND",
+              "hits": 0,
+              "residualHits": 1
+            }
+          ]
+        }
+      ],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:FREQUENCY",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "FREQUENCY"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:RETURN",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "RETURN"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:TREND",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "TREND"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:POSITION",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "POSITION"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:TREND+FREQ",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "TREND+FREQ"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:HIGH:FREQ+RETURN",
+      "context": {
+        "feature": "repeat",
+        "polarity": "HIGH",
+        "strategy": "FREQ+RETURN"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:FREQUENCY",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "FREQUENCY"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "ticket": [
+            5,
+            9,
+            17,
+            18,
+            73,
+            85
+          ],
+          "hits": 3,
+          "target": [
+            5,
+            9,
+            15,
+            17,
+            48,
+            74
+          ],
+          "signature": {
+            "context": {
+              "sum": "LOW",
+              "highnum": "LOW",
+              "odd": "LOW",
+              "repeat": "LOW",
+              "values": {
+                "sum": 271,
+                "highnum": 2.761904761904762,
+                "odd": 2.9047619047619047,
+                "repeat": 0.45
+              }
+            },
+            "trajectory": [
+              {
+                "sum": 288,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 250,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 298,
+                "high": 3,
+                "odd": 2
+              },
+              {
+                "sum": 274,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 369,
+                "high": 4,
+                "odd": 3
+              }
+            ],
+            "target": {
+              "sum": 168,
+              "high": 2,
+              "odd": 4
+            }
+          }
+        }
+      ],
+      "complements": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "base": "FREQUENCY",
+          "baseHits": 3,
+          "residual": [
+            15,
+            48,
+            74
+          ],
+          "best": [
+            {
+              "strategy": "FREQ+RETURN",
+              "hits": 0,
+              "residualHits": 3
+            },
+            {
+              "strategy": "RETURN",
+              "hits": 0,
+              "residualHits": 1
+            },
+            {
+              "strategy": "TREND",
+              "hits": 0,
+              "residualHits": 1
+            }
+          ]
+        }
+      ],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:RETURN",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "RETURN"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:TREND",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "TREND"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:POSITION",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "POSITION"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:TREND+FREQ",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "TREND+FREQ"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [],
+      "complements": [],
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "e2927:repeat:LOW:FREQ+RETURN",
+      "context": {
+        "feature": "repeat",
+        "polarity": "LOW",
+        "strategy": "FREQ+RETURN"
+      },
+      "range": [
+        2700,
+        2927
+      ],
+      "cases": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "ticket": [
+            5,
+            9,
+            17,
+            18,
+            73,
+            85
+          ],
+          "hits": 3,
+          "target": [
+            5,
+            9,
+            15,
+            17,
+            48,
+            74
+          ],
+          "signature": {
+            "context": {
+              "sum": "LOW",
+              "highnum": "LOW",
+              "odd": "LOW",
+              "repeat": "LOW",
+              "values": {
+                "sum": 271,
+                "highnum": 2.761904761904762,
+                "odd": 2.9047619047619047,
+                "repeat": 0.45
+              }
+            },
+            "trajectory": [
+              {
+                "sum": 288,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 250,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 298,
+                "high": 3,
+                "odd": 2
+              },
+              {
+                "sum": 274,
+                "high": 3,
+                "odd": 4
+              },
+              {
+                "sum": 369,
+                "high": 4,
+                "odd": 3
+              }
+            ],
+            "target": {
+              "sum": 168,
+              "high": 2,
+              "odd": 4
+            }
+          }
+        }
+      ],
+      "complements": [
+        {
+          "i": 2747,
+          "date": "20/11/2025",
+          "base": "FREQ+RETURN",
+          "baseHits": 3,
+          "residual": [
+            15,
+            48,
+            74
+          ],
+          "best": [
+            {
+              "strategy": "FREQUENCY",
+              "hits": 0,
+              "residualHits": 3
+            },
+            {
+              "strategy": "RETURN",
+              "hits": 0,
+              "residualHits": 1
+            },
+            {
+              "strategy": "TREND",
+              "hits": 0,
+              "residualHits": 1
+            }
+          ]
+        }
+      ],
+      "status": "DISCOVERED"
     }
   ],
   "queue": {
     "type": "PERSISTENT_DOT_QUEUE",
     "total": 576,
-    "completed": 32,
-    "next": "e2927:highnum:HIGH:TREND+FREQ",
-    "remaining": 544
+    "completed": 48,
+    "next": "e2927:odd:LOW:TREND",
+    "remaining": 528
   },
   "lastRun": {
-    "at": "2026-10-03T12:49:24.225Z",
+    "at": "2026-10-03T12:50:18.428Z",
     "origin": "VINCI CASA",
     "target": "SUPERENALOTTO",
     "range": [
@@ -1357,6 +2096,6 @@
     ],
     "budget": 16,
     "processed": 16,
-    "remaining": 544
+    "remaining": 528
   }
 }
