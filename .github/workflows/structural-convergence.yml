@@ -27,6 +27,15 @@ jobs:
           sed -i 's/new Map(nums().map(n=>.35\*(nuc\[p\].get(n)||0)+.30\*(rel.pairs.get(n)||0)+.10\*(rel.triples.get(n)||0)+.15\*(rel.pos\[p\].get(n)||0)+.10\*freq.get(n)))/new Map(nums().map(n=>[n,.35*(nuc[p].get(n)||0)+.30*(rel.pairs.get(n)||0)+.10*(rel.triples.get(n)||0)+.15*(rel.pos[p].get(n)||0)+.10*freq.get(n)]))/' scripts/vincicasa-port-test.mjs
           sed -i 's/function relationScores(h){/function relationScores(h){h=h.slice(-200);/' scripts/vincicasa-port-test.mjs
           sed -i 's/function nucleusScores(h,i){/function nucleusScores(h,i){h=h.slice(-120);/' scripts/vincicasa-port-test.mjs
+      - name: Defensive patches for regime test
+        run: |
+          sed -i 's/]));return ticketPositions(s)}/])));return ticketPositions(s)}/g' scripts/vincicasa-regime-test.mjs
+          sed -i 's/function relationScores(h){/function relationScores(h){h=h.slice(-200);/' scripts/vincicasa-regime-test.mjs
+          sed -i 's/function nucleusScores(h,i){/function nucleusScores(h,i){h=h.slice(-120);/' scripts/vincicasa-regime-test.mjs
+      - name: Syntax check
+        run: |
+          node --check scripts/vincicasa-port-test.mjs
+          node --check scripts/vincicasa-regime-test.mjs
       - name: Run VinciCasa strategy port
         run: START=2700 node scripts/vincicasa-port-test.mjs
       - name: Run regime-conditioned port
