@@ -31,18 +31,21 @@ jobs:
         run: |
           node --check scripts/sonar-strategy-library.mjs
           node --check scripts/sonar-research-engine.mjs
+          node --check scripts/sonar-3plus-context-analysis.mjs
       - name: Run SuperEnalotto autonomous research cycle
         run: BUDGET=16 node scripts/sonar-research-engine.mjs
-      - name: Commit research state
+      - name: Analyze 3+ hit contexts
+        run: node scripts/sonar-3plus-context-analysis.mjs
+      - name: Commit research state and 3+ analysis
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md
+          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md SONAR_3plus_context_analysis.md
           if git diff --staged --quiet; then
             echo "No research-state changes to commit."
             exit 0
           fi
-          git commit -m "Advance SuperEnalotto persistent DOT queue"
+          git commit -m "Advance SuperEnalotto research and 3+ context analysis"
           git restore src/engine/multigen.js src/engine/dominant-band.js
           git pull --rebase origin research/sonar-superenalotto-autonomous
           git push origin HEAD:research/sonar-superenalotto-autonomous
