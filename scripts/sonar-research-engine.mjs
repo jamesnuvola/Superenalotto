@@ -1,9 +1,10 @@
-import draws from '../src/data/draws.js'
+import rawDraws from '../src/data/draws.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { strategy, STRATEGIES } from './sonar-strategy-library.mjs'
 
+const draws=rawDraws.map(d=>[d[0],d[1],Array.isArray(d[2])?d[2].map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90):[],d[3]])
 const START=Math.max(300,Number(process.env.START||2700)), END=Math.min(Number(process.env.END||draws.length-1),draws.length-1)
-const STATE='SONAR_research_state.json', REPORT='SONAR_autonomous_research_report.md'
+const STATE='SONAR_superenalotto_research_state.json', REPORT='SONAR_superenalotto_autonomous_research_report.md'
 const BUDGET=Number(process.env.BUDGET||16), HIGH_HIT=Number(process.env.HIGH_HIT||3)
 const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0
 const median=a=>{const x=[...a].sort((a,b)=>a-b);return x.length%2?x[(x.length-1)/2]:(x[x.length/2-1]+x[x.length/2])/2}
@@ -13,8 +14,8 @@ const context=(h,lookback=21)=>{const w=h.slice(-lookback),s=w.map(sum),hi=w.map
 const signature=(h,real)=>({context:context(h),trajectory:h.slice(-5).map(d=>({sum:sum(d),high:high(d),odd:odd(d)})),target:{sum:sum({2:real}),high:high({2:real}),odd:odd({2:real})}})
 const defs=[]
 for(const feature of ['sum','highnum','odd','repeat'])for(const polarity of ['HIGH','LOW'])for(const strat of STRATEGIES)defs.push({id:`${feature}:${polarity}:${strat}`,feature,polarity,strat})
-let db={version:2,created:'2026-10-03',tested:[],findings:[],queue:defs.map(x=>x.id)}
-if(existsSync(STATE))try{db={...db,...JSON.parse(readFileSync(STATE,'utf8'))}}catch{}
+let db={version:3,created:'2026-10-03',origin:'VINCI CASA',target:'SUPERENALOTTO',tested:[],findings:[],queue:defs.map(x=>x.id)}
+if(existsSync(STATE))try{db={...db,...JSON.parse(readFileSync(STATE,'utf8')),origin:'VINCI CASA',target:'SUPERENALOTTO'}}catch{}
 const done=new Set(db.tested.map(x=>x.id)), pending=defs.filter(x=>!done.has(x.id)).slice(0,BUDGET)
 for(const c of pending){const cases=[],highCases=[],complements=[]
  for(let i=START;i<=END;i++){const h=draws.slice(0,i),s=context(h),real=draws[i][2];if(s[c.feature]!==c.polarity)continue;const ticket=strategy(h,c.strat);if(!ticket)continue;const k=hit(ticket,real),sig=signature(h,real);cases.push({i,date:draws[i][0],ticket,hits:k,target:real,signature:sig});if(k>=HIGH_HIT)highCases.push(cases.at(-1))
@@ -24,9 +25,9 @@ for(const c of pending){const cases=[],highCases=[],complements=[]
  db.tested.push({id:c.id,range:[START,END],cases:cases.length,ge3:highCases.length,ge4:four.length,ge5:five.length,ge6:six.length,status:'DISCOVERED'})
  db.findings.push({id:c.id,context:c,cases:cases.filter(x=>x.hits>=HIGH_HIT).slice(0,24),complements:complements.slice(0,24),status:'DISCOVERED'})
 }
-db.lastRun={at:new Date().toISOString(),range:[START,END],budget:BUDGET,remaining:defs.length-db.tested.length}
+db.lastRun={at:new Date().toISOString(),origin:'VINCI CASA',target:'SUPERENALOTTO',range:[START,END],budget:BUDGET,remaining:defs.length-db.tested.length}
 writeFileSync(STATE,JSON.stringify(db,null,2))
-let out=`# SONAR — Autonomous Research Engine\n\nRun: ${db.lastRun.at}\nTarget: ${draws[START][0]} → ${draws[END][0]}\nNodi processati: ${pending.length}\nNodi residui: ${db.lastRun.remaining}\n\n`
+let out=`# SONAR — Autonomous SuperEnalotto Research Engine\n\nOrigin/lab: **VinciCasa**\nTarget dataset: **SuperEnalotto**\nRun: ${db.lastRun.at}\nTarget window: ${draws[START][0]} → ${draws[END][0]}\nNodi processati: ${pending.length}\nNodi residui: ${db.lastRun.remaining}\n\n`
 out+='## Regola metodologica\n\nIl motore non cerca una regola universale e non promuove una strategia sulla sola media. Ogni nodo è **contesto → strategia → evento**. Gli eventi con ≥3 hit vengono conservati; per 4/5 hit viene inoltre calcolato il residuo e cercata la strategia complementare che copre quel residuo. Il 6/6 è registrato come evento speciale.\n\n'
 out+='## Nodi processati\n\n| Nodo | Casi | ≥3 | ≥4 | ≥5 | 6/6 | Stato |\n|---|---:|---:|---:|---:|---:|---|\n'
 for(const x of db.tested.slice(-pending.length))out+=`| ${x.id} | ${x.cases} | ${x.ge3} | ${x.ge4} | ${x.ge5} | ${x.ge6} | ${x.status} |\n`
