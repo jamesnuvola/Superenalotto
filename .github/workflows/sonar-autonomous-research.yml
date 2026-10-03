@@ -1,6 +1,9 @@
 name: SONAR autonomous research loop
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - research/autonomous-engine-2026-10-03
   schedule:
     - cron: '17 */4 * * *'
 permissions:
