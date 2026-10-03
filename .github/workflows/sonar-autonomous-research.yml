@@ -24,12 +24,18 @@ jobs:
         run: |
           node --check scripts/sonar-strategy-library.mjs
           node --check scripts/sonar-research-engine.mjs
+          node --check scripts/sonar-3plus-context-analysis.mjs
+          node --check scripts/sonar-next-ticket.mjs
       - name: Run SuperEnalotto autonomous research cycle
         run: BUDGET=16 node scripts/sonar-research-engine.mjs
-      - name: Commit research state
+      - name: Run corrected 3plus context audit
+        run: node scripts/sonar-3plus-context-analysis.mjs
+      - name: Generate next SONAR ticket candidate
+        run: node scripts/sonar-next-ticket.mjs
+      - name: Commit research state and current candidate
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md
-          git diff --staged --quiet || git commit -m "Advance SuperEnalotto persistent DOT queue"
+          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md SONAR_3plus_context_analysis.md SONAR_next_ticket.md
+          git diff --staged --quiet || git commit -m "Advance SONAR research and next ticket audit"
           git push
