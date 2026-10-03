@@ -4,6 +4,7 @@ on:
     paths:
       - 'scripts/structural-convergence-ablation.mjs'
       - 'scripts/vincicasa-port-test.mjs'
+      - 'scripts/vincicasa-regime-test.mjs'
       - '.github/workflows/structural-convergence.yml'
   workflow_dispatch: {}
 permissions:
@@ -28,10 +29,12 @@ jobs:
           sed -i 's/function nucleusScores(h,i){/function nucleusScores(h,i){h=h.slice(-120);/' scripts/vincicasa-port-test.mjs
       - name: Run VinciCasa strategy port
         run: START=2700 node scripts/vincicasa-port-test.mjs
-      - name: Commit report
+      - name: Run regime-conditioned port
+        run: START=2700 node scripts/vincicasa-regime-test.mjs
+      - name: Commit reports
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SONAR_vincicasa_port_superenalotto_2026-10-02.md
-          git diff --staged --quiet || git commit -m "Backtest VinciCasa strategies on SuperEnalotto"
+          git add SONAR_vincicasa_port_superenalotto_2026-10-02.md SONAR_vincicasa_regime_superenalotto_2026-10-02.md
+          git diff --staged --quiet || git commit -m "Backtest VinciCasa strategies by regime"
           git push
