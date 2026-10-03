@@ -2,10 +2,10 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T16:01:23.541Z  
+Run: 2026-10-03T16:01:58.877Z  
 DOTs processed: **16**  
-DOTs remaining: **44**  
-Next DOT: **C:e1559:repeat:HIGH:FREQUENCY**
+DOTs remaining: **28**  
+Next DOT: **C:e1331:repeat:HIGH:TREND+FREQ**
 
 ## Architecture
 
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| C:e2015:repeat:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:sum:HIGH:TREND | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:sum:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:sum:LOW:FREQUENCY | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:sum:LOW:POSITION | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:sum:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:highnum:HIGH:FREQUENCY | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:highnum:HIGH:TREND | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:highnum:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:highnum:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:highnum:LOW:POSITION | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:odd:HIGH:FREQUENCY | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:odd:HIGH:TREND | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:odd:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:odd:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
-| C:e1559:odd:LOW:POSITION | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1559:repeat:HIGH:FREQUENCY | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1559:repeat:HIGH:TREND | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1559:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1559:repeat:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1559:repeat:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 1332–1559 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:sum:HIGH:RETURN | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:sum:HIGH:TREND | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:sum:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:highnum:HIGH:RETURN | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:highnum:LOW:TREND | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:highnum:LOW:TREND+FREQ | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:odd:HIGH:RETURN | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:odd:HIGH:TREND | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:odd:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:repeat:HIGH:RETURN | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
+| C:e1331:repeat:HIGH:TREND | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
 
 ## Methodological rule
 
