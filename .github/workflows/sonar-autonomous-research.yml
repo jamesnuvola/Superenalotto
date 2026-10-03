@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/autonomous-engine-2026-10-03
+      - test/vincicasa-port-2026-10-02
   schedule:
     - cron: '17 */4 * * *'
 permissions:
