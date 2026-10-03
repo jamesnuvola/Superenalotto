@@ -1,37 +1,47 @@
 # SONAR — Autonomous SuperEnalotto Research Engine
 
-Origin/lab: **VinciCasa**
-Target dataset: **SuperEnalotto**
-Run: 2026-10-03T12:50:18.428Z
-DOT agents processed: 16
-DOT agents remaining: 528
-Next DOT: e2927:odd:LOW:TREND
+Origin/lab: **VinciCasa**  
+Target: **SuperEnalotto**  
+Run: 2026-10-03T13:00:09.200Z  
+DOTs processed: **16**  
+DOTs remaining: **527**  
+Next DOT: **C:e2699:sum:HIGH:RETURN**
 
-## Persistent DOT model
+## Architecture
 
-Each DOT is a persistent research agent identified by **historical window + context + strategy**. A completed DOT is never silently repeated. The queue advances through the latest window and then progressively older windows, preserving every result. A new draw creates a new latest-window frontier without deleting previous work.
+Each DOT is a persistent research agent. It executes once, stores evidence, and is never silently repeated. New draws create a new latest-window frontier while previous evidence remains.
 
-## Nodi processati
+## Parallel tracks
 
-| DOT | Finestra | Casi | ≥3 | ≥4 | ≥5 | 6/6 | Stato |
-|---|---|---:|---:|---:|---:|---:|---|
-| e2927:odd:LOW:TREND | 2700–2927 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:odd:LOW:POSITION | 2700–2927 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:odd:LOW:TREND+FREQ | 2700–2927 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:odd:LOW:FREQ+RETURN | 2700–2927 | 129 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:FREQUENCY | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:RETURN | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:TREND | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:POSITION | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:TREND+FREQ | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:HIGH:FREQ+RETURN | 2700–2927 | 34 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:FREQUENCY | 2700–2927 | 194 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:RETURN | 2700–2927 | 194 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:TREND | 2700–2927 | 194 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:POSITION | 2700–2927 | 194 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:TREND+FREQ | 2700–2927 | 194 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2927:repeat:LOW:FREQ+RETURN | 2700–2927 | 194 | 1 | 0 | 0 | 0 | DISCOVERED |
+- **Conditional discovery:** find when a rule works and when it fails.
+- **6/6 Hunter:** search historical 6/6 conditions directly, independently of 3/4/5-hit paths.
+- **Condition analysis:** ≥3 findings spawn child DOTs that compare success contexts with nearby failures.
 
-## Regola metodologica
+## Recent DOTs
 
-Un DOT non dimostra una regola universale. I risultati ≥3 hit vengono conservati per cercare contesti simili e ripetibili; i 4/5 hit generano analisi del residuo e strategie complementari. DISCOVERED non significa validato: la promozione richiede definizione congelata, OOS e null condizionato. I fallimenti restano nel registro.
+| DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| e2927:6HUNTER | 6HUNTER | 2700–2927 | 0 | - | - | - | 0 | NO_DIRECT_6_6 |
+| e2699:sum:HIGH:FREQUENCY | DISCOVERY | 2472–2699 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:HIGH:RETURN | DISCOVERY | 2472–2699 | 116 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:HIGH:TREND | DISCOVERY | 2472–2699 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:HIGH:POSITION | DISCOVERY | 2472–2699 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:HIGH:TREND+FREQ | DISCOVERY | 2472–2699 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:HIGH:FREQ+RETURN | DISCOVERY | 2472–2699 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:FREQUENCY | DISCOVERY | 2472–2699 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:RETURN | DISCOVERY | 2472–2699 | 112 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:TREND | DISCOVERY | 2472–2699 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:POSITION | DISCOVERY | 2472–2699 | 112 | 2 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:TREND+FREQ | DISCOVERY | 2472–2699 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:sum:LOW:FREQ+RETURN | DISCOVERY | 2472–2699 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:highnum:HIGH:FREQUENCY | DISCOVERY | 2472–2699 | 148 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:highnum:HIGH:RETURN | DISCOVERY | 2472–2699 | 148 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:highnum:HIGH:TREND | DISCOVERY | 2472–2699 | 148 | 0 | 0 | 0 | 0 | DISCOVERED |
+
+## Methodological rule
+
+A discovery is not a universal rule. Each rule card records **works when**, **fails when**, success examples and counterexamples. Promotion requires a frozen definition, out-of-sample validation and a conditional null. Failures are evidence, not discarded noise.
+
+## 6/6 priority
+
+The 6/6 Hunter is independent: SONAR does not assume that the path producing 3/4/5 hits is the path to 6/6. Historical 6/6 cases are analysed for their own necessary conditions and alternative routes.
