@@ -1,0 +1,69 @@
+name: SONAR autonomous scheduler
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sonar-autonomous-scheduler
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout SONAR research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/sonar-superenalotto-autonomous
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare ESM imports
+        run: |
+          sed -i "s|'../engine/scoring'|'../engine/scoring.js'|g; s|'./scoring'|'./scoring.js'|g; s|'./dominant-band'|'./dominant-band.js'|g" src/engine/multigen.js src/engine/dominant-band.js
+
+      - name: Syntax check
+        run: |
+          node --check scripts/sonar-strategy-library.mjs
+          node --check scripts/sonar-research-engine.mjs
+          node --check scripts/sonar-3plus-context-analysis.mjs
+          node --check scripts/sonar-next-ticket.mjs
+
+      - name: Run autonomous research cycle
+        run: BUDGET=16 node scripts/sonar-research-engine.mjs
+
+      - name: Run corrected 3plus context audit
+        run: node scripts/sonar-3plus-context-analysis.mjs
+
+      - name: Generate next SONAR ticket candidate
+        run: node scripts/sonar-next-ticket.mjs
+
+      - name: Write heartbeat
+        run: |
+          {
+            echo "# SONAR autonomous heartbeat"
+            echo
+            echo "- Last run UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+            echo "- GitHub run: ${GITHUB_RUN_ID}"
+            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Scheduler: every 5 minutes"
+          } > SONAR_autonomous_heartbeat.md
+
+      - name: Commit research state and heartbeat
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md SONAR_3plus_context_analysis.md SONAR_next_ticket.md SONAR_autonomous_heartbeat.md
+          git diff --staged --quiet || git commit -m "Advance SONAR autonomous research"
+          git push origin HEAD:research/sonar-superenalotto-autonomous
