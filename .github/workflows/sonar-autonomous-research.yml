@@ -1,6 +1,10 @@
 name: SONAR SuperEnalotto autonomous research loop
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/sonar-autonomous-research.yml'
+      - 'scripts/**'
   schedule:
     - cron: '*/5 * * * *'
 permissions:
