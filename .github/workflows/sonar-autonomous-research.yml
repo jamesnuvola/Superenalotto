@@ -43,6 +43,7 @@ jobs:
             exit 0
           fi
           git commit -m "Advance SuperEnalotto persistent DOT queue"
+          git restore src/engine/multigen.js src/engine/dominant-band.js
           git pull --rebase origin research/sonar-superenalotto-autonomous
           git push origin HEAD:research/sonar-superenalotto-autonomous
       - name: Trigger next autonomous cycle
