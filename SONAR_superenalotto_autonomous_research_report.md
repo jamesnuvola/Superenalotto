@@ -2,10 +2,10 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T16:00:29.742Z  
+Run: 2026-10-03T16:00:57.566Z  
 DOTs processed: **16**  
-DOTs remaining: **76**  
-Next DOT: **C:e2243:highnum:LOW:FREQUENCY**
+DOTs remaining: **60**  
+Next DOT: **C:e2015:repeat:HIGH:FREQ+RETURN**
 
 ## Architecture
 
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| C:e2471:highnum:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:highnum:LOW:POSITION | CONDITION_ANALYSIS | 2244–2471 | 2 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:HIGH:FREQUENCY | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:HIGH:RETURN | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:HIGH:POSITION | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:odd:LOW:POSITION | CONDITION_ANALYSIS | 2244–2471 | 3 | - | - | - | - | DISCOVERED |
-| C:e2471:repeat:HIGH:FREQUENCY | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:repeat:HIGH:RETURN | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 2244–2471 | 4 | - | - | - | - | DISCOVERED |
-| C:e2471:repeat:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2471:repeat:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 2244–2471 | 1 | - | - | - | - | DISCOVERED |
-| C:e2243:sum:LOW:FREQUENCY | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
-| C:e2243:sum:LOW:TREND | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
-| C:e2243:sum:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:highnum:LOW:FREQUENCY | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:highnum:LOW:TREND | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:highnum:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:odd:LOW:FREQUENCY | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:odd:LOW:TREND | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:odd:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:repeat:HIGH:FREQUENCY | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:repeat:HIGH:TREND | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2243:repeat:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 2016–2243 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:sum:LOW:FREQUENCY | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:sum:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:highnum:LOW:FREQUENCY | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:highnum:LOW:FREQ+RETURN | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:odd:HIGH:FREQUENCY | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:odd:HIGH:FREQ+RETURN | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
+| C:e2015:repeat:HIGH:FREQUENCY | CONDITION_ANALYSIS | 1788–2015 | 1 | - | - | - | - | DISCOVERED |
 
 ## Methodological rule
 
