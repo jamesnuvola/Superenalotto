@@ -2,9 +2,9 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T15:44:56.797Z  
+Run: 2026-10-03T15:45:28.090Z  
 DOTs processed: **16**  
-DOTs remaining: **451**  
+DOTs remaining: **441**  
 Next DOT: **C:e2699:sum:HIGH:RETURN**
 
 ## Architecture
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| e2243:highnum:HIGH:RETURN | DISCOVERY | 2016–2243 | 79 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:HIGH:TREND | DISCOVERY | 2016–2243 | 79 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:HIGH:POSITION | DISCOVERY | 2016–2243 | 79 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:HIGH:TREND+FREQ | DISCOVERY | 2016–2243 | 79 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:HIGH:FREQ+RETURN | DISCOVERY | 2016–2243 | 79 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:FREQUENCY | DISCOVERY | 2016–2243 | 149 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:RETURN | DISCOVERY | 2016–2243 | 149 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:TREND | DISCOVERY | 2016–2243 | 149 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:POSITION | DISCOVERY | 2016–2243 | 149 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:TREND+FREQ | DISCOVERY | 2016–2243 | 149 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:highnum:LOW:FREQ+RETURN | DISCOVERY | 2016–2243 | 149 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2243:odd:HIGH:FREQUENCY | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:odd:HIGH:RETURN | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:odd:HIGH:TREND | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:odd:HIGH:POSITION | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2243:odd:HIGH:TREND+FREQ | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:HIGH:FREQ+RETURN | DISCOVERY | 2016–2243 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:FREQUENCY | DISCOVERY | 2016–2243 | 112 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:RETURN | DISCOVERY | 2016–2243 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:TREND | DISCOVERY | 2016–2243 | 112 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:POSITION | DISCOVERY | 2016–2243 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:TREND+FREQ | DISCOVERY | 2016–2243 | 112 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:odd:LOW:FREQ+RETURN | DISCOVERY | 2016–2243 | 112 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:FREQUENCY | DISCOVERY | 2016–2243 | 228 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:RETURN | DISCOVERY | 2016–2243 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:TREND | DISCOVERY | 2016–2243 | 228 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:POSITION | DISCOVERY | 2016–2243 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:TREND+FREQ | DISCOVERY | 2016–2243 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:HIGH:FREQ+RETURN | DISCOVERY | 2016–2243 | 228 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:LOW:FREQUENCY | DISCOVERY | 2016–2243 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:LOW:RETURN | DISCOVERY | 2016–2243 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2243:repeat:LOW:TREND | DISCOVERY | 2016–2243 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
 
 ## Methodological rule
 
