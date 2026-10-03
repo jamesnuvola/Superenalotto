@@ -2,9 +2,9 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T15:46:21.321Z  
+Run: 2026-10-03T15:46:43.077Z  
 DOTs processed: **16**  
-DOTs remaining: **414**  
+DOTs remaining: **401**  
 Next DOT: **C:e2699:sum:HIGH:RETURN**
 
 ## Architecture
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| e2015:highnum:HIGH:FREQUENCY | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:HIGH:RETURN | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:HIGH:TREND | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:HIGH:POSITION | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:HIGH:TREND+FREQ | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:HIGH:FREQ+RETURN | DISCOVERY | 1788–2015 | 129 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:FREQUENCY | DISCOVERY | 1788–2015 | 99 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:RETURN | DISCOVERY | 1788–2015 | 99 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:TREND | DISCOVERY | 1788–2015 | 99 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:POSITION | DISCOVERY | 1788–2015 | 99 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:TREND+FREQ | DISCOVERY | 1788–2015 | 99 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:highnum:LOW:FREQ+RETURN | DISCOVERY | 1788–2015 | 99 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2015:odd:HIGH:FREQUENCY | DISCOVERY | 1788–2015 | 157 | 1 | 0 | 0 | 0 | DISCOVERED |
-| e2015:odd:HIGH:RETURN | DISCOVERY | 1788–2015 | 157 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:odd:HIGH:TREND | DISCOVERY | 1788–2015 | 157 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2015:odd:HIGH:POSITION | DISCOVERY | 1788–2015 | 157 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:HIGH:TREND+FREQ | DISCOVERY | 1788–2015 | 157 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:HIGH:FREQ+RETURN | DISCOVERY | 1788–2015 | 157 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:FREQUENCY | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:RETURN | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:TREND | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:POSITION | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:TREND+FREQ | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:odd:LOW:FREQ+RETURN | DISCOVERY | 1788–2015 | 71 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:FREQUENCY | DISCOVERY | 1788–2015 | 228 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:RETURN | DISCOVERY | 1788–2015 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:TREND | DISCOVERY | 1788–2015 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:POSITION | DISCOVERY | 1788–2015 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:TREND+FREQ | DISCOVERY | 1788–2015 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:HIGH:FREQ+RETURN | DISCOVERY | 1788–2015 | 228 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:LOW:FREQUENCY | DISCOVERY | 1788–2015 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2015:repeat:LOW:RETURN | DISCOVERY | 1788–2015 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
 
 ## Methodological rule
 
