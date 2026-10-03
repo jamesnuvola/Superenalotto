@@ -2,8 +2,8 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T16:02:46.901Z  
-DOTs processed: **12**  
+Run: 2026-10-03T16:03:11.760Z  
+DOTs processed: **0**  
 DOTs remaining: **0**  
 Next DOT: **WAITING_FOR_NEW_DATA**
 
@@ -21,18 +21,7 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| C:e647:sum:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
-| C:e647:highnum:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
-| C:e647:odd:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
-| C:e647:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:sum:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:sum:LOW:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:highnum:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:highnum:LOW:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:odd:HIGH:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:odd:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:repeat:HIGH:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
-| C:e419:repeat:HIGH:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| e419:C:e419:repeat:HIGH:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
 
 ## Methodological rule
 
