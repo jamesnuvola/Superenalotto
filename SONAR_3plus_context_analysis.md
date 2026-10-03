@@ -1,82 +1,39 @@
 # SONAR — 3+ context analysis
 
-Run: 2026-10-03T17:02:50.750Z
+Run: 2026-10-03T17:03:12.133Z
 Dataset draws: 2928; latest rolling window: 2700–2927 (228 draws); recent audit: 60 draws
 
 ## What this analysis asks
-Within the latest frozen window, identify every ≥3-hit event across the current condition × strategy matrix, then compare the recent regime with the historical 3+ fingerprint. This is hypothesis generation, not validation.
+Identify ≥3-hit parent events across the current condition × strategy matrix, keep condition × strategy observations as child explanations, then compare the historical success context with same-fingerprint failures. This is hypothesis generation, not validation.
 
-## Summary
-Unique draw/condition ≥3 events in the latest window: **8**
-Distinct conditions producing ≥3: **8**
+## Corrected counting
+Unique draw outcomes producing ≥3: **1**
+Condition × strategy ≥3 observations: **8**
+Distinct condition × strategy keys: **8**
+A single draw can generate several child observations; they are never counted as independent successes.
 
-### Conditions producing ≥3
-- highnum:LOW:FREQ+RETURN: **1** events
-- highnum:LOW:FREQUENCY: **1** events
-- odd:LOW:FREQ+RETURN: **1** events
-- odd:LOW:FREQUENCY: **1** events
-- repeat:HIGH:FREQ+RETURN: **1** events
-- repeat:HIGH:FREQUENCY: **1** events
-- sum:LOW:FREQ+RETURN: **1** events
-- sum:LOW:FREQUENCY: **1** events
+## Parent events
+- draw #2747 20/11/2025 | hits **3** | target [5, 9, 15, 17, 48, 74] | context LOW/LOW/LOW/HIGH | child observations **8**
 
-## Event list
-- draw #2747 20/11/2025 | sum:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | sum:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | highnum:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | highnum:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | odd:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | odd:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | repeat:HIGH:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
-- draw #2747 20/11/2025 | repeat:HIGH:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85] | target [5, 9, 15, 17, 48, 74] | context {"sum":271,"highnum":2.761904761904762,"odd":2.9047619047619047,"repeat":0.45}
+## Child condition × strategy observations
+- draw #2747 20/11/2025 | sum:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | sum:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | highnum:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | highnum:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | odd:LOW:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | odd:LOW:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | repeat:HIGH:FREQUENCY | hits **3** | ticket [5, 9, 17, 18, 73, 85]
+- draw #2747 20/11/2025 | repeat:HIGH:FREQ+RETURN | hits **3** | ticket [5, 9, 17, 18, 73, 85]
 
 ## Context fingerprints
-### #2747 20/11/2025 — sum:LOW:FREQUENCY — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
+### #2747 20/11/2025 — 3 hits
+Fingerprint: LOW/LOW/LOW/HIGH
+Children: sum:LOW:FREQUENCY, sum:LOW:FREQ+RETURN, highnum:LOW:FREQUENCY, highnum:LOW:FREQ+RETURN, odd:LOW:FREQUENCY, odd:LOW:FREQ+RETURN, repeat:HIGH:FREQUENCY, repeat:HIGH:FREQ+RETURN
 Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
 
-### #2747 20/11/2025 — sum:LOW:FREQ+RETURN — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
+## Exact-fingerprint comparison
+Reference fingerprint: **LOW/LOW/LOW/HIGH**; historical occurrences **108**; recent occurrences **33**.
 
-### #2747 20/11/2025 — highnum:LOW:FREQUENCY — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-### #2747 20/11/2025 — highnum:LOW:FREQ+RETURN — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-### #2747 20/11/2025 — odd:LOW:FREQUENCY — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-### #2747 20/11/2025 — odd:LOW:FREQ+RETURN — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-### #2747 20/11/2025 — repeat:HIGH:FREQUENCY — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-### #2747 20/11/2025 — repeat:HIGH:FREQ+RETURN — 3 hits
-Context: sum=LOW, highnum=LOW, odd=LOW, repeat=HIGH
-Ticket: 5, 9, 17, 18, 73, 85; target: 5, 9, 15, 17, 48, 74
-Previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
-
-## Recent regime comparison
-Reference fingerprint from the historical 3+ event: **LOW/LOW/LOW/HIGH** (the 20/11/2025 event #2747).
-Occurrences of this exact fingerprint in the latest rolling window: **108**; occurrences in the latest 60 draws: **33**.
-Recent matching draws: #2894 04/08/2026 (best=0) | #2895 06/08/2026 (best=2) | #2896 07/08/2026 (best=1) | #2897 08/08/2026 (best=1) | #2898 11/08/2026 (best=0) | #2899 13/08/2026 (best=1) | #2900 14/08/2026 (best=1) | #2901 17/08/2026 (best=0) | #2902 18/08/2026 (best=0) | #2903 20/08/2026 (best=1) | #2904 21/08/2026 (best=1) | #2905 22/08/2026 (best=1) | #2906 25/08/2026 (best=0) | #2907 27/08/2026 (best=1) | #2908 28/08/2026 (best=1) | #2909 29/08/2026 (best=0) | #2910 01/09/2026 (best=0) | #2911 03/09/2026 (best=1) | #2912 04/09/2026 (best=2) | #2913 05/09/2026 (best=2) | #2914 08/09/2026 (best=2) | #2915 10/09/2026 (best=2) | #2917 12/09/2026 (best=1) | #2918 15/09/2026 (best=1) | #2919 17/09/2026 (best=1) | #2920 18/09/2026 (best=1) | #2921 19/09/2026 (best=2) | #2922 22/09/2026 (best=1) | #2923 24/09/2026 (best=1) | #2924 25/09/2026 (best=0) | #2925 26/09/2026 (best=2) | #2926 29/09/2026 (best=1) | #2927 01/10/2026 (best=1)
-
-### Strategy performance inside the exact fingerprint
 | Strategy | N historical | Mean hits | ≥3 | N recent | Mean recent | ≥3 recent |
 |---|---:|---:|---:|---:|---:|---:|
 | POSITION | 108 | 0.435 | 0 | 33 | 0.455 | 0 |
@@ -86,7 +43,15 @@ Recent matching draws: #2894 04/08/2026 (best=0) | #2895 06/08/2026 (best=2) | #
 | TREND | 108 | 0.343 | 0 | 33 | 0.333 | 0 |
 | TREND+FREQ | 108 | 0.296 | 0 | 33 | 0.303 | 0 |
 
-### Last recent draws: maximum hit obtainable inside the frozen condition matrix
+## Second-level context audit
+### Success draw #2747 20/11/2025
+- sum: success=271.000 | same-fingerprint failure mean=257.435 | recent mean=254.166
+- highnum: success=2.762 | same-fingerprint failure mean=2.739 | recent mean=2.776
+- odd: success=2.905 | same-fingerprint failure mean=2.830 | recent mean=2.815
+- repeat: success=0.450 | same-fingerprint failure mean=0.307 | recent mean=0.279
+- previous 5: 11/11/2025:288/3H/4O | 13/11/2025:250/3H/4O | 14/11/2025:298/3H/2O | 15/11/2025:274/3H/4O | 18/11/2025:369/4H/3O
+
+## Recent audit
 - #2898 11/08/2026 | fp=LOW/LOW/LOW/HIGH | best=0 | sum:LOW:FREQUENCY, sum:LOW:RETURN, sum:LOW:TREND, sum:LOW:POSITION
 - #2899 13/08/2026 | fp=LOW/LOW/LOW/HIGH | best=1 | sum:LOW:FREQUENCY, sum:LOW:RETURN, sum:LOW:TREND, sum:LOW:TREND+FREQ
 - #2900 14/08/2026 | fp=LOW/LOW/LOW/HIGH | best=1 | sum:LOW:FREQUENCY, sum:LOW:POSITION, sum:LOW:FREQ+RETURN, highnum:LOW:FREQUENCY
@@ -119,7 +84,7 @@ Recent matching draws: #2894 04/08/2026 (best=0) | #2895 06/08/2026 (best=2) | #
 - #2927 01/10/2026 | fp=LOW/LOW/LOW/HIGH | best=1 | sum:LOW:FREQUENCY, sum:LOW:RETURN, sum:LOW:TREND, sum:LOW:TREND+FREQ
 
 ## Methodological interpretation
-- The historical 3+ fingerprint is used as a comparator, not as a rule to deploy.
-- Matching the same fingerprint in recent draws is useful only if the hit distribution and failure cases are also examined.
-- A recent absence of ≥3 does not invalidate a historical condition; a recent presence does not confirm it.
-- The next branch should compare exact-fingerprint successes against exact-fingerprint failures and then test the separating feature OOS.
+- Parent draw counts are the evidence denominator; child observations are explanatory candidates only.
+- The historical fingerprint is not a deployment rule.
+- Second-level differences are descriptive until frozen and tested OOS against same-fingerprint failures and a conditional null.
+- Failures remain evidence and are not discarded.
