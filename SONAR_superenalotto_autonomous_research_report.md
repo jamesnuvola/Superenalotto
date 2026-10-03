@@ -2,9 +2,9 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T15:56:36.702Z  
+Run: 2026-10-03T15:57:03.055Z  
 DOTs processed: **16**  
-DOTs remaining: **207**  
+DOTs remaining: **193**  
 Next DOT: **C:e2699:sum:HIGH:RETURN**
 
 ## Architecture
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| e875:highnum:LOW:FREQ+RETURN | DISCOVERY | 648–875 | 81 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:FREQUENCY | DISCOVERY | 648–875 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:RETURN | DISCOVERY | 648–875 | 134 | 2 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:TREND | DISCOVERY | 648–875 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:POSITION | DISCOVERY | 648–875 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:TREND+FREQ | DISCOVERY | 648–875 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:HIGH:FREQ+RETURN | DISCOVERY | 648–875 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:FREQUENCY | DISCOVERY | 648–875 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:RETURN | DISCOVERY | 648–875 | 94 | 2 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:TREND | DISCOVERY | 648–875 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:POSITION | DISCOVERY | 648–875 | 94 | 2 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:TREND+FREQ | DISCOVERY | 648–875 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:odd:LOW:FREQ+RETURN | DISCOVERY | 648–875 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:repeat:HIGH:FREQUENCY | DISCOVERY | 648–875 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e875:repeat:HIGH:RETURN | DISCOVERY | 648–875 | 228 | 4 | 0 | 0 | 0 | DISCOVERED |
-| e875:repeat:HIGH:TREND | DISCOVERY | 648–875 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:HIGH:POSITION | DISCOVERY | 648–875 | 228 | 2 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:HIGH:TREND+FREQ | DISCOVERY | 648–875 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:HIGH:FREQ+RETURN | DISCOVERY | 648–875 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:FREQUENCY | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:RETURN | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:TREND | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:POSITION | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:TREND+FREQ | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:repeat:LOW:FREQ+RETURN | DISCOVERY | 648–875 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e875:6HUNTER | 6HUNTER | 648–875 | 0 | - | - | - | 0 | NO_DIRECT_6_6 |
+| e647:sum:HIGH:FREQUENCY | DISCOVERY | 420–647 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e647:sum:HIGH:RETURN | DISCOVERY | 420–647 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e647:sum:HIGH:TREND | DISCOVERY | 420–647 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e647:sum:HIGH:POSITION | DISCOVERY | 420–647 | 116 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e647:sum:HIGH:TREND+FREQ | DISCOVERY | 420–647 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e647:sum:HIGH:FREQ+RETURN | DISCOVERY | 420–647 | 116 | 0 | 0 | 0 | 0 | DISCOVERED |
 
 ## Methodological rule
 
