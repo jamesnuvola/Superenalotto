@@ -2,10 +2,10 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T16:02:22.152Z  
-DOTs processed: **16**  
-DOTs remaining: **12**  
-Next DOT: **C:e647:sum:HIGH:POSITION**
+Run: 2026-10-03T16:02:46.901Z  
+DOTs processed: **12**  
+DOTs remaining: **0**  
+Next DOT: **WAITING_FOR_NEW_DATA**
 
 ## Architecture
 
@@ -21,22 +21,18 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| C:e1331:repeat:HIGH:TREND+FREQ | CONDITION_ANALYSIS | 1104–1331 | 1 | - | - | - | - | DISCOVERED |
-| C:e1103:sum:LOW:POSITION | CONDITION_ANALYSIS | 876–1103 | 1 | - | - | - | - | DISCOVERED |
-| C:e1103:highnum:LOW:POSITION | CONDITION_ANALYSIS | 876–1103 | 1 | - | - | - | - | DISCOVERED |
-| C:e1103:odd:LOW:POSITION | CONDITION_ANALYSIS | 876–1103 | 1 | - | - | - | - | DISCOVERED |
-| C:e1103:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 876–1103 | 1 | - | - | - | - | DISCOVERED |
-| C:e875:sum:HIGH:RETURN | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:sum:HIGH:POSITION | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:sum:LOW:RETURN | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:highnum:HIGH:RETURN | CONDITION_ANALYSIS | 648–875 | 3 | - | - | - | - | DISCOVERED |
-| C:e875:highnum:HIGH:POSITION | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:highnum:LOW:RETURN | CONDITION_ANALYSIS | 648–875 | 1 | - | - | - | - | DISCOVERED |
-| C:e875:odd:HIGH:RETURN | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:odd:LOW:RETURN | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:odd:LOW:POSITION | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
-| C:e875:repeat:HIGH:RETURN | CONDITION_ANALYSIS | 648–875 | 4 | - | - | - | - | DISCOVERED |
-| C:e875:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 648–875 | 2 | - | - | - | - | DISCOVERED |
+| C:e647:sum:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
+| C:e647:highnum:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
+| C:e647:odd:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
+| C:e647:repeat:HIGH:POSITION | CONDITION_ANALYSIS | 420–647 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:sum:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:sum:LOW:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:highnum:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:highnum:LOW:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:odd:HIGH:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:odd:LOW:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:repeat:HIGH:RETURN | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
+| C:e419:repeat:HIGH:TREND | CONDITION_ANALYSIS | 300–419 | 1 | - | - | - | - | DISCOVERED |
 
 ## Methodological rule
 
