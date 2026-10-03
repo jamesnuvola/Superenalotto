@@ -2,9 +2,9 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-10-03T15:42:32.132Z  
+Run: 2026-10-03T15:43:01.802Z  
 DOTs processed: **16**  
-DOTs remaining: **502**  
+DOTs remaining: **494**  
 Next DOT: **C:e2699:sum:HIGH:RETURN**
 
 ## Architecture
@@ -21,22 +21,22 @@ Each DOT is a persistent research agent. It executes once, stores evidence, and 
 
 | DOT | Type | Window | Cases/Successes | ≥3 | ≥4 | ≥5 | 6/6 | Status |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| e2699:odd:LOW:RETURN | DISCOVERY | 2472–2699 | 70 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:odd:LOW:TREND | DISCOVERY | 2472–2699 | 70 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:odd:LOW:POSITION | DISCOVERY | 2472–2699 | 70 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:odd:LOW:TREND+FREQ | DISCOVERY | 2472–2699 | 70 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:odd:LOW:FREQ+RETURN | DISCOVERY | 2472–2699 | 70 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:FREQUENCY | DISCOVERY | 2472–2699 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:RETURN | DISCOVERY | 2472–2699 | 228 | 2 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:TREND | DISCOVERY | 2472–2699 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:POSITION | DISCOVERY | 2472–2699 | 228 | 2 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:TREND+FREQ | DISCOVERY | 2472–2699 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:HIGH:FREQ+RETURN | DISCOVERY | 2472–2699 | 228 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:LOW:FREQUENCY | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:LOW:RETURN | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:LOW:TREND | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:LOW:POSITION | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
-| e2699:repeat:LOW:TREND+FREQ | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:repeat:LOW:FREQ+RETURN | DISCOVERY | 2472–2699 | 0 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2699:6HUNTER | 6HUNTER | 2472–2699 | 0 | - | - | - | 0 | NO_DIRECT_6_6 |
+| e2471:sum:HIGH:FREQUENCY | DISCOVERY | 2244–2471 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:HIGH:RETURN | DISCOVERY | 2244–2471 | 134 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:HIGH:TREND | DISCOVERY | 2244–2471 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:HIGH:POSITION | DISCOVERY | 2244–2471 | 134 | 2 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:HIGH:TREND+FREQ | DISCOVERY | 2244–2471 | 134 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:HIGH:FREQ+RETURN | DISCOVERY | 2244–2471 | 134 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:FREQUENCY | DISCOVERY | 2244–2471 | 94 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:RETURN | DISCOVERY | 2244–2471 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:TREND | DISCOVERY | 2244–2471 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:POSITION | DISCOVERY | 2244–2471 | 94 | 2 | 1 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:TREND+FREQ | DISCOVERY | 2244–2471 | 94 | 0 | 0 | 0 | 0 | DISCOVERED |
+| e2471:sum:LOW:FREQ+RETURN | DISCOVERY | 2244–2471 | 94 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2471:highnum:HIGH:FREQUENCY | DISCOVERY | 2244–2471 | 173 | 1 | 0 | 0 | 0 | DISCOVERED |
+| e2471:highnum:HIGH:RETURN | DISCOVERY | 2244–2471 | 173 | 1 | 0 | 0 | 0 | DISCOVERED |
 
 ## Methodological rule
 
