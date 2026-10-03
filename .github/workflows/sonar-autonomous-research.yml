@@ -28,11 +28,11 @@ jobs:
           node --check scripts/sonar-strategy-library.mjs
           node --check scripts/sonar-research-engine.mjs
       - name: Run SuperEnalotto autonomous research cycle
-        run: START=2700 BUDGET=16 node scripts/sonar-research-engine.mjs
+        run: BUDGET=16 node scripts/sonar-research-engine.mjs
       - name: Commit research state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SONAR_superenalotto_research_state.json SONAR_superenalotto_autonomous_research_report.md
-          git diff --staged --quiet || git commit -m "Advance SuperEnalotto SONAR research queue"
+          git diff --staged --quiet || git commit -m "Advance SuperEnalotto persistent DOT queue"
           git push
