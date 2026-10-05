@@ -1,6 +1,6 @@
 # SONAR — next ticket candidate
 
-Generated: 2026-10-05T00:13:01.501Z
+Generated: 2026-10-05T05:51:34.813Z
 History through draw index 2927; source date: 01/10/2026
 Strategies contributing: 6/6
 
