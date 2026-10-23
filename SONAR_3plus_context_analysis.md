@@ -1,6 +1,6 @@
 # SONAR — 3+ context analysis
 
-Run: 2026-10-23T11:30:22.763Z
+Run: 2026-10-23T15:54:31.962Z
 Dataset draws: 2928; latest rolling window: 2700–2927 (228 draws); recent audit: 60 draws
 
 ## What this analysis asks
