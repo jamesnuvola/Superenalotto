@@ -2,7 +2,7 @@
 
 Origin/lab: **VinciCasa**  
 Target: **SuperEnalotto**  
-Run: 2026-11-13T00:46:37.740Z  
+Run: 2026-11-13T07:25:36.702Z  
 DOTs processed: **0**  
 DOTs remaining: **0**  
 Next DOT: **WAITING_FOR_NEW_DATA**
